@@ -287,34 +287,47 @@ footer.note{text-align:center;font-size:11.5px;color:var(--moss);margin-top:30px
 <script>
 /* ================= Data & Storage ================= */
 const UNITS = JSON.parse(document.getElementById('app-data').textContent);
-let AI_Q = {}; // unitId -> array
+let CUSTOM_Q = {}; // unitId -> array (user-written questions)
 let PROGRESS = {}; // unitId -> {seen:{}, correct:{}, exams:[]}
 let EDITS = {}; // unitId -> { mcq: {key: {question,options,explanation}}, flash: {key: {question,answer,explanation}} }
 let storageReady = false;
+const LS_KEYS = {progress:'bioapp_progress', custom:'bioapp_custom', edits:'bioapp_edits'};
+
+function lsGet(key){
+  try{
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : {};
+  }catch(e){ return {}; }
+}
+function lsSet(key, obj){
+  try{
+    localStorage.setItem(key, JSON.stringify(obj));
+    return true;
+  }catch(e){ return false; }
+}
+function storageAvailable(){
+  try{
+    const t='__t__'; localStorage.setItem(t,'1'); localStorage.removeItem(t);
+    return true;
+  }catch(e){ return false; }
+}
+let STORAGE_OK = true;
 
 async function loadStorage(){
-  try{
-    const p = await window.storage.get('progress', false);
-    PROGRESS = p ? JSON.parse(p.value) : {};
-  }catch(e){ PROGRESS = {}; }
-  try{
-    const a = await window.storage.get('ai-questions', false);
-    AI_Q = a ? JSON.parse(a.value) : {};
-  }catch(e){ AI_Q = {}; }
-  try{
-    const ed = await window.storage.get('edits', false);
-    EDITS = ed ? JSON.parse(ed.value) : {};
-  }catch(e){ EDITS = {}; }
+  STORAGE_OK = storageAvailable();
+  PROGRESS = lsGet(LS_KEYS.progress);
+  CUSTOM_Q = lsGet(LS_KEYS.custom);
+  EDITS = lsGet(LS_KEYS.edits);
   storageReady = true;
 }
 async function saveProgress(){
-  try{ await window.storage.set('progress', JSON.stringify(PROGRESS), false); }catch(e){}
+  lsSet(LS_KEYS.progress, PROGRESS);
 }
-async function saveAI(){
-  try{ await window.storage.set('ai-questions', JSON.stringify(AI_Q), false); }catch(e){}
+async function saveCustom(){
+  lsSet(LS_KEYS.custom, CUSTOM_Q);
 }
 async function saveEdits(){
-  try{ await window.storage.set('edits', JSON.stringify(EDITS), false); }catch(e){}
+  lsSet(LS_KEYS.edits, EDITS);
 }
 function ensureUnitEdits(uid){
   if(!EDITS[uid]) EDITS[uid] = {mcq:{}, flash:{}};
@@ -331,12 +344,12 @@ function allQuestionsFor(uid){
     const e = edits[k];
     return {...q, ...(e||{}), _key:k, source:'pdf', edited: !!e};
   });
-  const ai = (AI_Q[uid]||[]).map((q,i)=>{
-    const k='a'+i;
+  const custom = (CUSTOM_Q[uid]||[]).map((q,i)=>{
+    const k='c'+i;
     const e = edits[k];
-    return {...q, ...(e||{}), _key:k, source:'ai', edited: !!e};
+    return {...q, ...(e||{}), _key:k, source:'custom', edited: !!e};
   });
-  return base.concat(ai);
+  return base.concat(custom);
 }
 function flashFor(uid){
   const u = UNITS.find(x=>x.id===uid);
@@ -352,15 +365,32 @@ function flashFor(uid){
 let state = {
   view:'home', unitId:null,
   examQueue:[], examAnswers:{}, examIndex:0, examSecondsLeft:0, examTimer:null, examTotalSeconds:0,
-  examResult:null, aiLoading:false, aiCount:5, aiError:'',
+  examResult:null,
   editOpen: new Set(),
+  customDraft: null,
 };
 
 function nav(view, extra={}){
   state = {...state, view, ...extra};
+  history.pushState({view, unitId: state.unitId}, '', '');
   render();
   window.scrollTo({top:0,behavior:'instant'});
 }
+
+window.addEventListener('popstate', (e)=>{
+  if(state.view==='examRun'){
+    const leave = confirm('পরীক্ষা বন্ধ করবেন? অগ্রগতি সংরক্ষিত হবে না।');
+    if(!leave){
+      history.pushState({view:'examRun', unitId: state.unitId}, '', '');
+      return;
+    }
+    clearInterval(state.examTimer);
+  }
+  const s = e.state || {view:'home', unitId:null};
+  state = {...state, view: s.view, unitId: s.unitId ?? null};
+  render();
+  window.scrollTo({top:0,behavior:'instant'});
+});
 
 /* ================= Icons ================= */
 const ICO = {
@@ -373,6 +403,8 @@ const ICO = {
   fwd: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>`,
   cards: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg>`,
   edit: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>`,
+  plus: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>`,
+  trash: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0-1 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 6"/></svg>`,
 };
 
 
@@ -425,17 +457,9 @@ function topbarHTML(){
   </div>`;
 }
 
-function goBack(){
-  if(['study','examConfig','ai','flash'].includes(state.view)) nav('unit',{unitId:state.unitId});
-  else if(state.view==='examRun') { if(confirm('পরীক্ষা বন্ধ করবেন? অগ্রগতি সংরক্ষিত হবে না।')){ clearInterval(state.examTimer); nav('unit',{unitId:state.unitId}); } }
-  else if(state.view==='examResult') nav('unit',{unitId:state.unitId});
-  else if(state.view==='unit'||state.view==='stats') nav('home');
-  else nav('home');
-}
-
 function attachHandlers(){
   const back = document.getElementById('btn-back');
-  if(back) back.onclick = goBack;
+  if(back) back.onclick = ()=> history.back();
 
   if(state.view==='home') attachHome();
   if(state.view==='unit') attachUnit();
@@ -445,7 +469,7 @@ function attachHandlers(){
   if(state.view==='examRun') attachExamRun();
   if(state.view==='examResult') attachExamResult();
   if(state.view==='stats') attachStats();
-  if(state.view==='ai') attachAI();
+  if(state.view==='custom') attachCustom();
 }
 
 /* ================= HOME ================= */
@@ -458,7 +482,7 @@ function viewHTML(){
   if(state.view==='examRun') return examRunHTML();
   if(state.view==='examResult') return examResultHTML();
   if(state.view==='stats') return statsHTML();
-  if(state.view==='ai') return aiHTML();
+  if(state.view==='custom') return customHTML();
   return '';
 }
 
@@ -469,6 +493,7 @@ function homeHTML(){
   const avgScore = avgScoreCnt? Math.round(avgScoreSum/avgScoreCnt) : null;
 
   return `
+  ${!STORAGE_OK? `<div style="background:#fbe9e5;border:1px solid var(--rust);border-radius:14px;padding:12px 16px;margin-bottom:16px;font-size:12.5px;color:var(--rust-deep);line-height:1.6;">⚠️ এই ব্রাউজারে সংরক্ষণ (storage) চালু করা যায়নি, তাই তোমার পড়া/এডিট/পরীক্ষার ফলাফল সেভ হবে না। ফাইলটা সরাসরি ব্রাউজারে (ডাবল-ক্লিক না করে, Chrome/Safari দিয়ে খুলে) ব্যবহার করে দেখো, অথবা ইনকগনিটো মোড এড়িয়ে চলো।</div>`:''}
   <div class="hero">
     <div class="eyebrow">১০টি ইউনিট • ${totalQ}+ MCQ • বাংলা ব্যাখ্যাসহ</div>
     <h2 class="font-display">এইচএসসি জীববিজ্ঞান<br>ওয়ানশট প্র্যাকটিস</h2>
@@ -484,12 +509,12 @@ function homeHTML(){
   <div class="unit-grid">
     ${UNITS.map(u=>{
       const p = unitStudyPercent(u.id);
-      const aiCount = (AI_Q[u.id]||[]).length;
+      const customCount = (CUSTOM_Q[u.id]||[]).length;
       return `<button class="unit-card" data-uid="${u.id}">
         <div class="unit-ring">${ringSVG(p)}<div class="num">${u.id}</div></div>
         <div class="unit-info">
           <h3>${esc(u.name)}</h3>
-          <div class="meta"><span><b>${u.questions.length}</b> MCQ</span>${u.flash.length? `<span><b>${u.flash.length}</b> কার্ড</span>`:''}${aiCount? `<span><b>${aiCount}</b> AI</span>`:''}<span>${p}% পড়া হয়েছে</span></div>
+          <div class="meta"><span><b>${u.questions.length}</b> MCQ</span>${u.flash.length? `<span><b>${u.flash.length}</b> কার্ড</span>`:''}${customCount? `<span><b>${customCount}</b> নিজের</span>`:''}<span>${p}% পড়া হয়েছে</span></div>
         </div>
         <div class="chev">${ICO.fwd}</div>
       </button>`;
@@ -503,7 +528,7 @@ function homeHTML(){
       <div><h4>আমার অগ্রগতি ও পরিসংখ্যান</h4><p>সব ইউনিটের পড়া ও পরীক্ষার ফলাফল একসাথে দেখো</p></div>
     </button>
   </div>
-  <footer class="note">উৎস: তোমার আপলোড করা PDF থেকে সংগৃহীত প্রশ্ন। কিছু প্রশ্ন ফন্ট-সমস্যার কারণে PDF থেকে নেওয়া যায়নি — সেগুলোর জন্য প্রতিটি ইউনিটে "AI দিয়ে নতুন প্রশ্ন" অপশন ব্যবহার করতে পারো।<br><br>তৈরি করেছেন <b style="color:var(--forest);">Shahriar Sumrat</b></footer>
+  <footer class="note">উৎস: তোমার আপলোড করা PDF থেকে সংগৃহীত প্রশ্ন। কিছু প্রশ্ন ফন্ট-সমস্যার কারণে PDF থেকে নেওয়া যায়নি — সেগুলোর জন্য প্রতিটি ইউনিটে "নিজের প্রশ্ন যোগ করো" অপশন দিয়ে নিজে লিখে MCQ যোগ করতে পারো।<br><br>তৈরি করেছেন <b style="color:var(--forest);">Shahriar Sumrat</b></footer>
   `;
 }
 function attachHome(){
@@ -521,13 +546,13 @@ function unitHTML(){
   const prog = ensureUnitProgress(u.id);
   const examCount = (prog.exams||[]).length;
   const best = examCount? Math.max(...prog.exams.map(e=>pct(e.score,e.total))) : null;
-  const aiCount = (AI_Q[u.id]||[]).length;
+  const customCount = (CUSTOM_Q[u.id]||[]).length;
 
   return `
   <div class="unit-header">
     <span class="tag font-mono">UNIT ${u.id} / 10</span>
     <h2>${esc(u.name)}</h2>
-    <div class="desc">${u.questions.length}টি MCQ${u.flash.length? ' • '+u.flash.length+'টি সংক্ষিপ্ত প্রশ্নোত্তর':''}${aiCount? ' • '+aiCount+'টি AI প্রশ্ন':''} — এখন পর্যন্ত ${p}% পড়া হয়েছে${best!==null? ' • সেরা স্কোর '+best+'%':''}</div>
+    <div class="desc">${u.questions.length}টি MCQ${u.flash.length? ' • '+u.flash.length+'টি সংক্ষিপ্ত প্রশ্নোত্তর':''}${customCount? ' • '+customCount+'টি নিজের প্রশ্ন':''} — এখন পর্যন্ত ${p}% পড়া হয়েছে${best!==null? ' • সেরা স্কোর '+best+'%':''}</div>
   </div>
 
   <div class="mode-grid">
@@ -536,7 +561,7 @@ function unitHTML(){
       <h4>পড়া ও অনুশীলন</h4>
       <p>এক লিস্টে সব প্রশ্ন — উত্তর দিলেই সাথে সাথে ব্যাখ্যা দেখবে</p>
     </button>
-    <button class="mode-card" id="btn-exam" ${u.questions.length+aiCount<4?'style="opacity:.5;pointer-events:none;"':''}>
+    <button class="mode-card" id="btn-exam" ${u.questions.length+customCount<4?'style="opacity:.5;pointer-events:none;"':''}>
       <div class="icon" style="background:#fbe9e5;color:var(--rust-deep);">${ICO.clock}</div>
       <h4>টাইমড পরীক্ষা</h4>
       <p>সময় বেঁধে পরীক্ষা দাও, শেষে স্কোর ও রিভিউ পাবে</p>
@@ -546,10 +571,10 @@ function unitHTML(){
       <h4>ঝটপট প্রশ্নোত্তর</h4>
       <p>${u.flash.length}টি সরাসরি প্রশ্ন-উত্তর কার্ড</p>
     </button>`:''}
-    <button class="mode-card" id="btn-ai">
-      <div class="icon" style="background:#eef0fb;color:#4a4fb0;">${ICO.spark}</div>
-      <h4>AI দিয়ে নতুন প্রশ্ন</h4>
-      <p>এই ইউনিটের উপর বাংলায় নতুন MCQ তৈরি করো</p>
+    <button class="mode-card" id="btn-custom">
+      <div class="icon" style="background:#eef0fb;color:#4a4fb0;">${ICO.plus}</div>
+      <h4>নিজের প্রশ্ন যোগ করো</h4>
+      <p>নিজে লিখে MCQ তৈরি করো, এই ইউনিটে যুক্ত হবে${customCount? ' ('+customCount+'টি আছে)':''}</p>
     </button>
   </div>
   `;
@@ -558,7 +583,7 @@ function attachUnit(){
   document.getElementById('btn-study').onclick = ()=> nav('study',{unitId:state.unitId});
   document.getElementById('btn-exam').onclick = ()=> nav('examConfig',{unitId:state.unitId});
   const f = document.getElementById('btn-flash'); if(f) f.onclick = ()=> nav('flash',{unitId:state.unitId});
-  document.getElementById('btn-ai').onclick = ()=> nav('ai',{unitId:state.unitId, aiError:''});
+  document.getElementById('btn-custom').onclick = ()=> nav('custom',{unitId:state.unitId});
 }
 
 /* ================= STUDY / PRACTICE ================= */
@@ -575,7 +600,7 @@ function studyHTML(){
       const selected = answered? prog.seen[q._key] : null;
       return `<div class="qcard" data-key="${q._key}">
         <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span class="qnum font-mono">প্রশ্ন ${idx+1}${q.source==='ai'?' <span class="ai-badge" style="margin-right:0;margin-left:6px;">AI</span>':''}${q.edited?' <span class="ai-badge" style="background:#fbf0dd;color:var(--amber-deep);margin-right:0;margin-left:6px;">এডিট করা</span>':''}</span>
+          <span class="qnum font-mono">প্রশ্ন ${idx+1}${q.source==='custom'?' <span class="ai-badge" style="margin-right:0;margin-left:6px;">নিজের</span>':''}${q.edited?' <span class="ai-badge" style="background:#fbf0dd;color:var(--amber-deep);margin-right:0;margin-left:6px;">এডিট করা</span>':''}</span>
           <button class="edit-btn" data-key="${q._key}" title="এডিট করো">${ICO.edit}</button>
         </div>
         <div class="qtext">${esc(q.question)}</div>
@@ -902,78 +927,84 @@ function statsHTML(){
 }
 function attachStats(){}
 
-/* ================= AI GENERATE ================= */
-function aiHTML(){
+/* ================= CUSTOM QUESTIONS (write your own) ================= */
+function customHTML(){
   const u = UNITS.find(x=>x.id===state.unitId);
-  const existing = AI_Q[u.id]||[];
-  return `<div class="ai-box">
-    <h4 class="font-display" style="margin:0 0 6px;font-size:17px;">${ICO.spark.replace('18','20')} AI দিয়ে বাংলা MCQ তৈরি করো</h4>
-    <p style="font-size:13px;color:var(--moss);line-height:1.6;margin:0 0 16px;">"${esc(u.name)}" বিষয়ের উপর ভিত্তি করে নতু ন বাংলা MCQ (অপশন ও ব্যাখ্যাসহ) তৈরি হবে। এগুলো তোমার পড়া ও পরীক্ষার তালিকায় যুক্ত হয়ে যাবে।</p>
-    <div style="font-size:13px;font-weight:600;margin-bottom:6px;">কতটি প্রশ্ন?</div>
-    <div class="pill-row" id="ai-count-pills">
-      ${[5,10,15].map(n=>`<button class="pill ${n===state.aiCount?'active':''}" data-n="${n}">${n}</button>`).join('')}
+  const list = (CUSTOM_Q[u.id]||[]).map((q,i)=>({...q, _key:'c'+i}));
+  const labels=['ক','খ','গ','ঘ'];
+  const d = state.customDraft || {question:'',options:['','','',''],correct:0,explanation:''};
+
+  return `<div class="ai-box" style="margin-bottom:18px;">
+    <h4 class="font-display" style="margin:0 0 6px;font-size:17px;">${ICO.plus} নিজের প্রশ্ন লেখো</h4>
+    <p style="font-size:13px;color:var(--moss);line-height:1.6;margin:0 0 16px;">"${esc(u.name)}" ইউনিটে নিজে MCQ লিখে যোগ করো — এটা তোমার পড়া ও পরীক্ষার তালিকায় যুক্ত হয়ে যাবে।</p>
+    <div class="edit-field"><label>প্রশ্ন</label><textarea rows="2" id="cf-question" placeholder="প্রশ্ন লেখো...">${esc(d.question)}</textarea></div>
+    ${[0,1,2,3].map(oi=>`<div class="edit-field"><label>অপশন ${labels[oi]}</label><textarea rows="1" id="cf-opt${oi}" placeholder="অপশন ${labels[oi]}">${esc(d.options[oi]||'')}</textarea></div>`).join('')}
+    <div class="edit-field">
+      <label>সঠিক উত্তর</label>
+      <div class="pill-row" id="cf-correct-pills" style="margin:4px 0 0;">
+        ${labels.map((l,oi)=>`<button class="pill correct-pill ${oi===d.correct?'active':''}" data-oi="${oi}">${l}</button>`).join('')}
+      </div>
     </div>
-    <button class="big-btn amber" id="btn-generate" ${state.aiLoading?'disabled':''}>
-      ${state.aiLoading? `<span class="spinner"></span> তৈরি হচ্ছে...` : 'নতুন প্রশ্ন তৈরি করো'}
-    </button>
-    ${state.aiError? `<div style="color:var(--rust-deep);font-size:12.5px;margin-top:10px;">${esc(state.aiError)}</div>`:''}
-    ${existing.length? `<p style="font-size:12px;color:var(--moss);margin-top:14px;">এই ইউনিটে ইতিমধ্যে ${existing.length}টি AI-তৈরি প্রশ্ন আছে — সেগুলো "পড়া ও অনুশীলন" এবং "পরীক্ষা"-তে দেখা যাবে।</p>`:''}
-  </div>`;
-}
-function attachAI(){
-  document.querySelectorAll('#ai-count-pills .pill').forEach(p=>{
-    p.onclick = ()=>{ state.aiCount = Number(p.dataset.n); render(); };
-  });
-  document.getElementById('btn-generate').onclick = generateAIQuestions;
-}
+    <div class="edit-field"><label>ব্যাখ্যা (ঐচ্ছিক)</label><textarea rows="2" id="cf-explanation" placeholder="উত্তরের ব্যাখ্যা...">${esc(d.explanation)}</textarea></div>
+    <button class="big-btn amber" id="btn-add-custom">${ICO.plus} প্রশ্ন যোগ করো</button>
+  </div>
 
-async function generateAIQuestions(){
+  ${list.length? `<div class="section-label">তোমার লেখা প্রশ্ন (${list.length}টি)</div>
+  ${list.map((q,idx)=>{
+    if(state.editOpen.has(q._key)) return editFormHTML(q, idx);
+    return `<div class="qcard" data-key="${q._key}">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="qnum font-mono">নিজের প্রশ্ন ${idx+1}</span>
+        <div style="display:flex;gap:6px;">
+          <button class="edit-btn" data-key="${q._key}" title="এডিট করো">${ICO.edit}</button>
+          <button class="edit-btn del-custom-btn" data-idx="${idx}" title="মুছে ফেলো" style="color:var(--rust-deep);">${ICO.trash}</button>
+        </div>
+      </div>
+      <div class="qtext">${esc(q.question)}</div>
+      <div class="opts">
+      ${q.options.map((opt,oi)=>`<div class="opt-row"><button class="opt-btn dim disabled" disabled><span class="lbl" style="${oi===q.correct?'background:var(--leaf);color:#fff;':''}">${labels[oi]}</span> ${esc(opt)}</button></div>`).join('')}
+      </div>
+      ${q.explanation? `<div class="explain"><b>ব্যাখ্যা:</b> ${esc(q.explanation)}</div>`:''}
+    </div>`;
+  }).join('')}` : ''}
+  `;
+}
+function attachCustom(){
   const u = UNITS.find(x=>x.id===state.unitId);
-  state.aiLoading = true; state.aiError=''; render();
-  try{
-    const existingQs = (u.questions||[]).slice(0,25).map(q=>q.question);
-    const prompt = `তুমি একজন বাংলাদেশের HSC জীববিজ্ঞান বিষয়ের অভিজ্ঞ শিক্ষক। "${u.name}" (HSC Biology) অধ্যায়ের উপর ${state.aiCount}টি নতুন বহুনির্বাচনি প্রশ্ন (MCQ) তৈরি করো, যেগুলো নিচের তালিকার প্রশ্নগুলোর সাথে হুবহু মিলবে না (বিষয়বস্তু নতুন কোণ থেকে কভার করবে):
-${existingQs.slice(0,15).join('\n')}
-
-নিয়মাবলী:
-- প্রতিটি প্রশ্ন সম্পূর্ণ বাংলায় (প্রয়োজনে বৈজ্ঞানিক টার্মের ইংরেজি নাম বন্ধনীতে দিতে পারো)
-- প্রতিটি প্রশ্নে ঠিক ৪টি অপশন থাকবে
-- প্রতিটি প্রশ্নের একটি স্পষ্ট, সংক্ষিপ্ত বাংলা ব্যাখ্যা থাকবে
-- HSC পর্যায়ের পাঠ্যবই অনুযায়ী তথ্যনির্ভুল হতে হবে
-- শুধুমাত্র নিচের JSON ফরম্যাটে উত্তর দাও, অন্য কোনো টেক্সট, ভূমিকা বা মার্কডাউন কোড ফেন্স ছাড়া:
-
-[{"question":"...","options":["...","...","...","..."],"correct":0,"explanation":"..."}]
-
-"correct" হলো সঠিক অপশনের index (0=ক, 1=খ, 2=গ, 3=ঘ)।`;
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 4000,
-        messages: [{role:"user", content: prompt}]
-      })
-    });
-    const data = await response.json();
-    let text = (data.content||[]).map(b=>b.type==='text'?b.text:'').join('\n').trim();
-    text = text.replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
-    const firstBracket = text.indexOf('[');
-    const lastBracket = text.lastIndexOf(']');
-    if(firstBracket>=0 && lastBracket>=0) text = text.slice(firstBracket, lastBracket+1);
-    const parsed = JSON.parse(text);
-    const clean = parsed.filter(q=>q && q.question && Array.isArray(q.options) && q.options.length===4 && typeof q.correct==='number')
-      .map(q=>({question:String(q.question), options:q.options.map(String), correct:q.correct, explanation:String(q.explanation||'')}));
-    if(!clean.length) throw new Error('empty');
-    AI_Q[u.id] = (AI_Q[u.id]||[]).concat(clean);
-    await saveAI();
-    state.aiLoading=false;
-    nav('unit',{unitId:u.id});
-  }catch(e){
-    state.aiLoading=false;
-    state.aiError = 'প্রশ্ন তৈরি করতে সমস্যা হয়েছে। আবার চেষ্টা করো।';
+  document.querySelectorAll('#cf-correct-pills .pill').forEach(p=>{
+    p.onclick = ()=>{
+      document.querySelectorAll('#cf-correct-pills .pill').forEach(x=>x.classList.remove('active'));
+      p.classList.add('active');
+    };
+  });
+  document.getElementById('btn-add-custom').onclick = async ()=>{
+    const question = document.getElementById('cf-question').value.trim();
+    const options = [0,1,2,3].map(i=>document.getElementById('cf-opt'+i).value.trim());
+    const explanation = document.getElementById('cf-explanation').value.trim();
+    const correctPill = document.querySelector('#cf-correct-pills .pill.active');
+    const correct = correctPill? Number(correctPill.dataset.oi) : 0;
+    if(!question || options.some(o=>!o)){ alert('প্রশ্ন ও চারটি অপশনই লিখতে হবে।'); return; }
+    CUSTOM_Q[u.id] = (CUSTOM_Q[u.id]||[]);
+    CUSTOM_Q[u.id].push({question, options, correct, explanation});
+    await saveCustom();
+    state.customDraft = null;
     render();
-  }
+  };
+  attachEditCards(u.id, 'mcq');
+  document.querySelectorAll('.del-custom-btn').forEach(btn=>{
+    btn.onclick = async ()=>{
+      if(!confirm('এই প্রশ্নটি মুছে ফেলবে?')) return;
+      const idx = Number(btn.dataset.idx);
+      CUSTOM_Q[u.id].splice(idx,1);
+      // clean up edits tied to custom-question keys (indices shift after delete); keep PDF-question edits intact
+      if(EDITS[u.id]){
+        Object.keys(EDITS[u.id].mcq||{}).forEach(k=>{ if(k.startsWith('c')) delete EDITS[u.id].mcq[k]; });
+      }
+      await saveCustom();
+      await saveEdits();
+      render();
+    };
+  });
 }
 
 /* ================= EMPTY ================= */
@@ -984,6 +1015,7 @@ function emptyHTML(msg){
 /* ================= Boot ================= */
 (async function boot(){
   document.getElementById('app').innerHTML = `<div class="empty"><div class="big">🌿</div>লোড হচ্ছে...</div>`;
+  history.replaceState({view:'home', unitId:null}, '', '');
   await loadStorage();
   render();
 })();
