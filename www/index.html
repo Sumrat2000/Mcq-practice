@@ -1424,7 +1424,12 @@ function emptyHTML(msg){
 /* ================= Boot ================= */
 (async function boot(){
   document.getElementById('app').innerHTML = `<div class="empty"><div class="big">🌿</div>লোড হচ্ছে...</div>`;
-  history.replaceState({view:'home', unitId:null}, '', '');
+  try{
+    history.replaceState({view:'home', unitId:null}, '', '');
+    // push one extra "buffer" entry so the very first back-swipe has something
+    // of ours to consume instead of exiting the browser/app immediately
+    history.pushState({view:'home', unitId:null}, '', '');
+  }catch(e){}
   await loadStorage();
   render();
 })();
