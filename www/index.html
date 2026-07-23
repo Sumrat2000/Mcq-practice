@@ -472,33 +472,43 @@ let state = {
   studyPage: 1,
   builderUnits: new Set(UNITS.map(u=>u.id)),
   pendingAnswerKey: {}, // unitId -> _key of most-recently-answered question (kept visible before moving to end)
+  navStack: [],
 };
 
 function nav(view, extra={}){
+  // remember where we came from so the in-app back button always works,
+  // regardless of whether the browser/webview's History API cooperates
+  state.navStack = state.navStack || [];
+  state.navStack.push({view: state.view, unitId: state.unitId});
   state = {...state, view, ...extra};
-  history.pushState({view, unitId: state.unitId}, '', '');
+  try{ history.pushState({view, unitId: state.unitId}, '', ''); }catch(e){}
   render();
   window.scrollTo({top:0,behavior:'instant'});
 }
 
-window.addEventListener('popstate', (e)=>{
+function goBack(){
   if(state.view==='examRun'){
-    const leave = confirm('পরীক্ষা বন্ধ করবেন? অগ্রগতি সংরক্ষিত হবে না।');
-    if(!leave){
-      history.pushState({view:'examRun', unitId: state.unitId}, '', '');
-      return;
-    }
+    if(!confirm('পরীক্ষা বন্ধ করবেন? অগ্রগতি সংরক্ষিত হবে না।')) return;
     clearInterval(state.examTimer);
   }
-  const s = e.state || {view:'home', unitId:null};
-  state = {...state, view: s.view, unitId: s.unitId ?? null};
+  const stack = state.navStack || [];
+  const prev = stack.pop();
+  state = {...state, view: prev? prev.view : 'home', unitId: prev? prev.unitId : null, navStack: stack};
   render();
   window.scrollTo({top:0,behavior:'instant'});
+}
+
+// Hardware/browser back gesture: best-effort secondary layer for real browser tabs.
+// The in-app back button above (goBack) is the primary, reliable mechanism.
+window.addEventListener('popstate', (e)=>{
+  goBack();
+  try{ history.pushState({view: state.view, unitId: state.unitId}, '', ''); }catch(err){}
 });
 
 function goHome(){
-  history.pushState({view:'home', unitId:null}, '', '');
+  state.navStack = [];
   state = {...state, view:'home', unitId:null};
+  try{ history.pushState({view:'home', unitId:null}, '', ''); }catch(e){}
   render();
   window.scrollTo({top:0,behavior:'instant'});
 }
@@ -600,7 +610,7 @@ function bottomNavHTML(){
 
 function attachHandlers(){
   const back = document.getElementById('btn-back');
-  if(back) back.onclick = ()=> history.back();
+  if(back) back.onclick = goBack;
   const bnHome = document.getElementById('bn-home');
   if(bnHome) bnHome.onclick = goHome;
   const bnUnit = document.getElementById('bn-unit');
