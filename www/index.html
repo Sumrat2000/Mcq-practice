@@ -116,6 +116,22 @@ body{
 .unit-info .meta b{color:var(--amber-deep);font-weight:700;}
 .chev{color:var(--moss);flex-shrink:0;}
 
+/* ---------- home folder cards ---------- */
+.folder-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;}
+.folder-card{
+  background:var(--card);border:1px solid var(--line);border-radius:18px;
+  padding:18px 14px;text-align:right;cursor:pointer;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;align-items:flex-end;gap:4px;
+  transition:transform .12s ease;
+}
+.folder-card:active{transform:scale(0.96);}
+.folder-icon{
+  width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;
+  color:#fff;margin-bottom:6px;
+}
+.folder-card h3{font-family:'Baloo Da 2';font-size:15.5px;margin:0;color:var(--ink);font-weight:600;}
+.folder-card p{font-size:11.5px;color:var(--moss);margin:0;line-height:1.4;}
+
 /* ---------- unit hub ---------- */
 .unit-header{
   background:var(--card);border:1px solid var(--line);border-radius:18px;
@@ -363,8 +379,9 @@ let PROGRESS = {}; // unitId -> {seen:{}, correct:{}, exams:[]}
 let EDITS = {}; // unitId -> { mcq: {key: {question,options,explanation,correct}} }
 let MIXED_EXAMS = []; // array of {date, unitIds:[], score, total, took}
 let storageReady = false;
-const LS_KEYS = {progress:'bioapp_progress', custom:'bioapp_custom', edits:'bioapp_edits', mixed:'bioapp_mixed_exams', settings:'bioapp_settings'};
+const LS_KEYS = {progress:'bioapp_progress', custom:'bioapp_custom', edits:'bioapp_edits', mixed:'bioapp_mixed_exams', settings:'bioapp_settings', favorites:'bioapp_favorites'};
 let SETTINGS = {moveAnsweredToEnd: false};
+let FAVORITES = new Set(); // set of "uid:key" strings
 
 function lsGetArr(key){
   try{ const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : []; }
@@ -393,6 +410,7 @@ async function loadStorage(){
   MIXED_EXAMS = lsGetArr(LS_KEYS.mixed);
   const s = lsGet(LS_KEYS.settings);
   SETTINGS = {moveAnsweredToEnd: false, ...s};
+  FAVORITES = new Set(lsGetArr(LS_KEYS.favorites));
   storageReady = true;
 }
 async function saveProgress(){ lsSet(LS_KEYS.progress, PROGRESS); }
@@ -400,6 +418,26 @@ async function saveCustom(){ lsSet(LS_KEYS.custom, CUSTOM_Q); }
 async function saveEdits(){ lsSet(LS_KEYS.edits, EDITS); }
 async function saveMixedExams(){ lsSet(LS_KEYS.mixed, MIXED_EXAMS); }
 async function saveSettings(){ lsSet(LS_KEYS.settings, SETTINGS); }
+async function saveFavorites(){ lsSet(LS_KEYS.favorites, Array.from(FAVORITES)); }
+function favKey(uid,key){ return uid+':'+key; }
+function isFavorite(uid,key){ return FAVORITES.has(favKey(uid,key)); }
+async function toggleFavorite(uid,key){
+  const fk = favKey(uid,key);
+  if(FAVORITES.has(fk)) FAVORITES.delete(fk); else FAVORITES.add(fk);
+  await saveFavorites();
+}
+function favoriteQuestions(){
+  const out = [];
+  FAVORITES.forEach(fk=>{
+    const [uidStr, key] = fk.split(':');
+    const uid = Number(uidStr);
+    const u = UNITS.find(x=>x.id===uid);
+    if(!u) return;
+    const q = allQuestionsFor(uid).find(x=>x._key===key);
+    if(q) out.push(q);
+  });
+  return out;
+}
 
 function ensureUnitEdits(uid){
   if(!EDITS[uid]) EDITS[uid] = {mcq:{}};
@@ -480,6 +518,9 @@ const ICO = {
   refresh: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>`,
   layers: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg>`,
   check: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`,
+  heart: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>`,
+  heartFill: `<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>`,
+  folder: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>`,
 };
 
 /* ================= Helpers ================= */
@@ -528,10 +569,16 @@ function topbarHTML(){
   if(state.unitId){
     const u = UNITS.find(x=>x.id===state.unitId);
     if(u){ title = 'ইউনিট '+u.id; sub = u.name; }
+  }else if(state.view==='units'){
+    title = 'ইউনিটসমূহ'; sub = '১০টি ইউনিট থেকে বেছে নাও';
   }else if(state.view==='examBuilder'){
     title = 'কাস্টম পরীক্ষা'; sub = 'একাধিক ইউনিট থেকে প্রশ্ন বেছে নাও';
+  }else if(state.view==='favorites'||state.view==='favExamConfig'){
+    title = 'ফেভারিট প্রশ্ন'; sub = 'তোমার পছন্দ করা প্রশ্নগুলো';
   }else if((state.view==='examRun'||state.view==='examResult') && state.examMode==='mixed'){
     title = 'মিশ্র পরীক্ষা'; sub = state.examUnitIds.length+'টি ইউনিট থেকে প্রশ্ন';
+  }else if((state.view==='examRun'||state.view==='examResult') && state.examMode==='favorites'){
+    title = 'ফেভারিট পরীক্ষা'; sub = 'পছন্দ করা প্রশ্ন থেকে পরীক্ষা';
   }
   return `<div class="topbar">
     <div class="leaf-badge">${ICO.leaf.replace('currentColor','#eaf3ec')}</div>
@@ -560,6 +607,7 @@ function attachHandlers(){
   if(bnUnit) bnUnit.onclick = ()=> nav('unit',{unitId:state.unitId});
 
   if(state.view==='home') attachHome();
+  if(state.view==='units') attachUnits();
   if(state.view==='unit') attachUnit();
   if(state.view==='study') attachStudy();
   if(state.view==='examConfig') attachExamConfig();
@@ -568,11 +616,14 @@ function attachHandlers(){
   if(state.view==='stats') attachStats();
   if(state.view==='custom') attachCustom();
   if(state.view==='examBuilder') attachExamBuilder();
+  if(state.view==='favorites') attachFavorites();
+  if(state.view==='favExamConfig') attachFavExamConfig();
 }
 
 /* ================= Router ================= */
 function viewHTML(){
   if(state.view==='home') return homeHTML();
+  if(state.view==='units') return unitsHTML();
   if(state.view==='unit') return unitHTML();
   if(state.view==='study') return studyHTML();
   if(state.view==='examConfig') return examConfigHTML();
@@ -581,6 +632,8 @@ function viewHTML(){
   if(state.view==='stats') return statsHTML();
   if(state.view==='custom') return customHTML();
   if(state.view==='examBuilder') return examBuilderHTML();
+  if(state.view==='favorites') return favoritesHTML();
+  if(state.view==='favExamConfig') return favExamConfigHTML();
   return '';
 }
 
@@ -591,6 +644,7 @@ function homeHTML(){
   UNITS.forEach(u=>{ const p=PROGRESS[u.id]; if(p&&p.exams){ totalExams+=p.exams.length; p.exams.forEach(e=>{avgScoreSum+=pct(Math.max(0,e.score),e.total); avgScoreCnt++;}); } });
   MIXED_EXAMS.forEach(e=>{ totalExams++; avgScoreSum+=pct(Math.max(0,e.score),e.total); avgScoreCnt++; });
   const avgScore = avgScoreCnt? Math.round(avgScoreSum/avgScoreCnt) : null;
+  const favCount = FAVORITES.size;
 
   return `
   ${!STORAGE_OK? `<div style="background:#fbe9e5;border:1px solid var(--rust);border-radius:14px;padding:12px 16px;margin-bottom:16px;font-size:12.5px;color:var(--rust-deep);line-height:1.6;">⚠️ এই ব্রাউজারে সংরক্ষণ (storage) চালু করা যায়নি, তাই তোমার পড়া/এডিট/পরীক্ষার ফলাফল সেভ হবে না।</div>`:''}
@@ -605,8 +659,41 @@ function homeHTML(){
     </div>
   </div>
 
-  <div class="section-label">ইউনিটসমূহ</div>
-  <div class="unit-grid">
+  <div class="folder-grid">
+    <button class="folder-card" id="btn-go-units">
+      <div class="folder-icon" style="background:linear-gradient(155deg,var(--forest),var(--leaf));">${ICO.folder}</div>
+      <h3>ইউনিটসমূহ</h3>
+      <p>১০টি ইউনিট ধরে পড়ো ও অনুশীলন করো</p>
+    </button>
+    <button class="folder-card" id="btn-go-exam">
+      <div class="folder-icon" style="background:linear-gradient(155deg,#c65a3a,var(--rust));">${ICO.clock}</div>
+      <h3>পরীক্ষা</h3>
+      <p>একাধিক ইউনিট বেছে নিয়ে টাইমড পরীক্ষা দাও</p>
+    </button>
+    <button class="folder-card" id="btn-go-stats">
+      <div class="folder-icon" style="background:linear-gradient(155deg,#3d7a9c,#5a9bbd);">${ICO.chart}</div>
+      <h3>পরিসংখ্যান</h3>
+      <p>তোমার পড়া ও ফলাফলের অগ্রগতি দেখো</p>
+    </button>
+    <button class="folder-card" id="btn-go-favorites">
+      <div class="folder-icon" style="background:linear-gradient(155deg,#c94d6d,#e0708a);">${ICO.heartFill}</div>
+      <h3>ফেভারিট</h3>
+      <p>${favCount? favCount+'টি পছন্দের প্রশ্ন':'পছন্দের প্রশ্ন জমাও'}</p>
+    </button>
+  </div>
+  <footer class="note">তৈরি করেছেন <b style="color:var(--forest);">Shahriar Sumrat</b></footer>
+  `;
+}
+function attachHome(){
+  document.getElementById('btn-go-units').onclick = ()=> nav('units');
+  document.getElementById('btn-go-exam').onclick = ()=> nav('examBuilder',{unitId:null});
+  document.getElementById('btn-go-stats').onclick = ()=> nav('stats');
+  document.getElementById('btn-go-favorites').onclick = ()=> nav('favorites');
+}
+
+/* ================= UNITS LIST ================= */
+function unitsHTML(){
+  return `<div class="unit-grid">
     ${UNITS.map(u=>{
       const p = unitStudyPercent(u.id);
       const customCount = (CUSTOM_Q[u.id]||[]).length;
@@ -619,30 +706,12 @@ function homeHTML(){
         <div class="chev">${ICO.fwd}</div>
       </button>`;
     }).join('')}
-  </div>
-
-  <div class="section-label">অন্যান্য</div>
-  <div class="mode-grid">
-    <button class="mode-card full" id="btn-exam-builder">
-      <div class="icon" style="background:#fbe9e5;color:var(--rust-deep);">${ICO.layers}</div>
-      <div><h4>নিজের পছন্দমতো পরীক্ষা</h4><p>একাধিক ইউনিট বেছে নিয়ে ২৫/৫০/১০০টি প্রশ্নের পরীক্ষা দাও</p></div>
-    </button>
-    <button class="mode-card full" id="btn-stats">
-      <div class="icon" style="background:#eaf3ec;color:var(--leaf-deep);">${ICO.chart}</div>
-      <div><h4>আমার অগ্রগতি ও পরিসংখ্যান</h4><p>সব ইউনিটের পড়া ও পরীক্ষার ফলাফল একসাথে দেখো</p></div>
-    </button>
-  </div>
-  <footer class="note">তৈরি করেছেন <b style="color:var(--forest);">Shahriar Sumrat</b></footer>
-  `;
+  </div>`;
 }
-function attachHome(){
+function attachUnits(){
   document.querySelectorAll('.unit-card').forEach(el=>{
     el.onclick = ()=> nav('unit', {unitId: Number(el.dataset.uid)});
   });
-  const s = document.getElementById('btn-stats');
-  if(s) s.onclick = ()=> nav('stats');
-  const eb = document.getElementById('btn-exam-builder');
-  if(eb) eb.onclick = ()=> nav('examBuilder', {unitId:null});
 }
 
 /* ================= UNIT HUB ================= */
@@ -743,7 +812,10 @@ function studyHTML(){
       return `<div class="qcard" data-key="${q._key}">
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <span class="qnum font-mono">প্রশ্ন ${idx+1}${q.source==='custom'?' <span class="ai-badge" style="margin-right:0;margin-left:6px;">নিজের</span>':''}${q.edited?' <span class="ai-badge" style="background:#fbf0dd;color:var(--amber-deep);margin-right:0;margin-left:6px;">এডিট করা</span>':''}</span>
-          <button class="edit-btn" data-key="${q._key}" title="এডিট করো">${ICO.edit}</button>
+          <div style="display:flex;gap:5px;">
+            <button class="edit-btn fav-btn ${isFavorite(u.id,q._key)?'active':''}" data-uid="${u.id}" data-key="${q._key}" title="ফেভারিটে যোগ করো">${isFavorite(u.id,q._key)?ICO.heartFill:ICO.heart}</button>
+            <button class="edit-btn" data-key="${q._key}" title="এডিট করো">${ICO.edit}</button>
+          </div>
         </div>
         <div class="qtext">${esc(q.question)}</div>
         <div class="opts">
@@ -798,7 +870,15 @@ function attachStudy(){
   if(pgPrev) pgPrev.onclick = ()=>{ state.studyPage = Math.max(1,(state.studyPage||1)-1); render(); window.scrollTo({top:0,behavior:'instant'}); };
   const pgNext = document.getElementById('pg-next');
   if(pgNext) pgNext.onclick = ()=>{ state.studyPage = (state.studyPage||1)+1; render(); window.scrollTo({top:0,behavior:'instant'}); };
-  document.querySelectorAll('.edit-btn').forEach(btn=>{
+  document.querySelectorAll('.fav-btn').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const scrollY = window.scrollY;
+      await toggleFavorite(Number(btn.dataset.uid), btn.dataset.key);
+      render();
+      window.scrollTo({top:scrollY, behavior:'instant'});
+    };
+  });
+  document.querySelectorAll('.edit-btn:not(.fav-btn)').forEach(btn=>{
     btn.onclick = ()=>{ state.editOpen.add(btn.dataset.key); render(); };
   });
   attachEditCards(u.id);
@@ -968,7 +1048,10 @@ async function finishExam(){
   const took = state.examTotalSeconds - state.examSecondsLeft;
 
   if(state.examMode==='mixed'){
-    MIXED_EXAMS.push({date:new Date().toISOString(), unitIds: state.examUnitIds, score, total:qs.length, took, correctCount, wrongCount, skipped});
+    MIXED_EXAMS.push({date:new Date().toISOString(), unitIds: state.examUnitIds, score, total:qs.length, took, correctCount, wrongCount, skipped, type:'mixed'});
+    await saveMixedExams();
+  }else if(state.examMode==='favorites'){
+    MIXED_EXAMS.push({date:new Date().toISOString(), unitIds: [], score, total:qs.length, took, correctCount, wrongCount, skipped, type:'favorites'});
     await saveMixedExams();
   }else{
     const prog = ensureUnitProgress(state.unitId);
@@ -987,7 +1070,7 @@ async function finishExam(){
   });
   await saveProgress();
   state.examResult = {score, total: qs.length, took, review, correctCount, wrongCount, skipped};
-  nav('examResult',{unitId: state.examMode==='mixed'? null : state.unitId});
+  nav('examResult',{unitId: (state.examMode==='mixed'||state.examMode==='favorites')? null : state.unitId});
 }
 
 /* ================= EXAM RESULT ================= */
@@ -1026,18 +1109,20 @@ function examResultHTML(){
 function attachExamResult(){
   document.getElementById('btn-retry').onclick = ()=>{
     if(state.examMode==='mixed') nav('examBuilder',{unitId:null});
+    else if(state.examMode==='favorites') nav('favExamConfig',{unitId:null});
     else nav('examConfig',{unitId:state.unitId});
   };
 }
 
 /* ================= STATS ================= */
 function statsHTML(){
-  return `${MIXED_EXAMS.length? `<div class="section-label">মিশ্র পরীক্ষার ইতিহাস</div>
+  return `${MIXED_EXAMS.length? `<div class="section-label">মিশ্র ও ফেভারিট পরীক্ষার ইতিহাস</div>
   ${MIXED_EXAMS.slice().reverse().slice(0,10).map(e=>{
     const p = pct(Math.max(0,e.score), e.total);
     const d = new Date(e.date);
+    const label = e.type==='favorites'? `${ICO.heartFill.replace('15','14')} ফেভারিট প্রশ্ন (${e.total}টি)` : `${e.unitIds.length}টি ইউনিট মিলিয়ে (${e.total}টি প্রশ্ন)`;
     return `<div class="stat-card">
-      <h4>${e.unitIds.length}টি ইউনিট মিলিয়ে (${e.total}টি প্রশ্ন)</h4>
+      <h4>${label}</h4>
       <div class="stat-nums">
         <span>স্কোর: ${fmtScore(e.score)}/${e.total} (${p}%)</span>
         <span>${d.toLocaleDateString('bn-BD')}</span>
@@ -1129,6 +1214,9 @@ function attachCustom(){
     render();
   };
   attachEditCards(u.id);
+  document.querySelectorAll('.edit-btn:not(.del-custom-btn)').forEach(btn=>{
+    btn.onclick = ()=>{ state.editOpen.add(btn.dataset.key); render(); };
+  });
   document.querySelectorAll('.del-custom-btn').forEach(btn=>{
     btn.onclick = async ()=>{
       if(!confirm('এই প্রশ্নটি মুছে ফেলবে?')) return;
@@ -1204,6 +1292,115 @@ function attachExamBuilder(){
     state.examSecondsLeft = total_seconds;
     state.examMode = 'mixed';
     state.examUnitIds = unitIds;
+    nav('examRun',{unitId:null});
+    startExamTimer();
+  };
+}
+
+/* ================= FAVORITES ================= */
+function favoritesHTML(){
+  const favs = favoriteQuestions();
+  const labels=['ক','খ','গ','ঘ'];
+  if(!favs.length) return `<div class="empty"><div class="big">🤍</div>এখনো কোনো প্রশ্ন ফেভারিটে যোগ করোনি।<br>পড়ার সময় প্রশ্নের পাশে হার্ট বাটনে ট্যাপ করে যোগ করতে পারো।</div>`;
+  return `<div class="exam-config" style="margin-bottom:16px;">
+    <h4 class="font-display" style="margin:0 0 8px;font-size:16px;">${ICO.heartFill.replace('15','20')} ${favs.length}টি ফেভারিট প্রশ্ন</h4>
+    <p style="font-size:12.5px;color:var(--moss);margin:0 0 12px;">এখান থেকেও টাইমড পরীক্ষা দিতে পারো।</p>
+    <button class="big-btn amber" id="btn-fav-exam">ফেভারিট থেকে পরীক্ষা দাও</button>
+  </div>
+  ${favs.map((q,idx)=>{
+    const prog = ensureUnitProgress(q.unitId);
+    const answered = prog.seen && prog.seen[q._key]!==undefined;
+    const selected = answered? prog.seen[q._key] : null;
+    return `<div class="qcard" data-uid="${q.unitId}" data-key="${q._key}">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="qnum font-mono">প্রশ্ন ${idx+1} · ইউনিট ${q.unitId}</span>
+        <button class="edit-btn fav-btn active" data-uid="${q.unitId}" data-key="${q._key}" title="ফেভারিট থেকে সরাও">${ICO.heartFill}</button>
+      </div>
+      <div class="qtext">${esc(q.question)}</div>
+      <div class="opts">
+      ${q.options.map((opt,oi)=>{
+        let cls='opt-btn';
+        if(answered){
+          if(oi===q.correct) cls+=' correct';
+          else if(oi===selected) cls+=' wrong';
+          else cls+=' dim';
+        }
+        return `<div class="opt-row"><button class="${cls}" data-oi="${oi}"><span class="lbl">${labels[oi]}</span> ${esc(opt)}</button></div>`;
+      }).join('')}
+      </div>
+      ${answered? `<div class="explain"><b>ব্যাখ্যা:</b> ${esc(q.explanation||'কোনো ব্যাখ্যা দেওয়া নেই।')}</div>`:''}
+    </div>`;
+  }).join('')}
+  `;
+}
+function attachFavorites(){
+  const btn = document.getElementById('btn-fav-exam');
+  if(btn) btn.onclick = ()=> nav('favExamConfig');
+  document.querySelectorAll('.fav-btn').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const scrollY = window.scrollY;
+      await toggleFavorite(Number(btn.dataset.uid), btn.dataset.key);
+      render();
+      window.scrollTo({top:scrollY, behavior:'instant'});
+    };
+  });
+  document.querySelectorAll('.qcard').forEach(card=>{
+    const uid = Number(card.dataset.uid);
+    const key = card.dataset.key;
+    if(!uid) return;
+    card.querySelectorAll('.opt-btn').forEach(optBtn=>{
+      optBtn.onclick = async ()=>{
+        const oi = Number(optBtn.dataset.oi);
+        const q = allQuestionsFor(uid).find(x=>x._key===key);
+        if(!q) return;
+        const prog = ensureUnitProgress(uid);
+        prog.seen[key] = oi;
+        if(oi===q.correct) prog.correct[key]=true; else delete prog.correct[key];
+        await saveProgress();
+        const scrollY = window.scrollY;
+        render();
+        window.scrollTo({top:scrollY, behavior:'instant'});
+      };
+    });
+  });
+}
+
+function favExamConfigHTML(){
+  const favs = favoriteQuestions();
+  const total = favs.length;
+  const opts = [10,20,30].filter(n=>n<total);
+  opts.push(total);
+  const chosen = state._favExamCount || opts[0] || 0;
+  return `<div class="exam-config">
+    <h4 class="font-display" style="margin:0 0 4px;font-size:17px;">ফেভারিট পরীক্ষা সেট করো</h4>
+    <p style="font-size:13px;color:var(--moss);margin:0 0 10px;">মোট ফেভারিট প্রশ্ন: ${total}টি। প্রশ্নপ্রতি ৪৫ সেকেন্ড সময় দেওয়া হবে।</p>
+    <div class="neg-mark-note">⚠️ ভুল উত্তরে <b>-০.২৫</b> নম্বর কাটা যাবে। উত্তর না দিলে কোনো নম্বর কাটা হবে না।</div>
+    <div style="font-size:13px;font-weight:600;margin:14px 0 6px;">কতটি প্রশ্ন?</div>
+    <div class="pill-row" id="fav-count-pills">
+      ${opts.map(n=>`<button class="pill ${n===chosen?'active':''}" data-n="${n}">${n===total?'সব ('+total+')':n}</button>`).join('')}
+    </div>
+    <button class="big-btn" id="btn-start-fav-exam" ${!total?'disabled style="opacity:.5;"':''}>পরীক্ষা শুরু করো</button>
+  </div>`;
+}
+function attachFavExamConfig(){
+  const favs = favoriteQuestions();
+  if(!state._favExamCount) state._favExamCount = Math.min(10, favs.length);
+  document.querySelectorAll('#fav-count-pills .pill').forEach(p=>{
+    p.onclick = ()=>{ state._favExamCount = Number(p.dataset.n); render(); };
+  });
+  const startBtn = document.getElementById('btn-start-fav-exam');
+  if(startBtn) startBtn.onclick = ()=>{
+    const count = state._favExamCount || Math.min(10, favs.length);
+    if(!favs.length || !count) return;
+    const qs = shuffle(favs).slice(0, count);
+    const total_seconds = qs.length*45;
+    state.examQueue = qs;
+    state.examAnswers = {};
+    state.examIndex = 0;
+    state.examTotalSeconds = total_seconds;
+    state.examSecondsLeft = total_seconds;
+    state.examMode = 'favorites';
+    state.examUnitIds = [];
     nav('examRun',{unitId:null});
     startExamTimer();
   };
