@@ -513,6 +513,20 @@ function goHome(){
   window.scrollTo({top:0,behavior:'instant'});
 }
 
+// Authoritative native back handling: Capacitor's App plugin fires 'backButton'
+// for BOTH the 3-button back and the swipe/predictive-back gesture, on every
+// Android version. This is the one hook guaranteed to catch the gesture —
+// popstate alone can be bypassed by predictive back and just close the app.
+if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+  window.Capacitor.Plugins.App.addListener('backButton', () => {
+    if (state.view === 'home') {
+      window.Capacitor.Plugins.App.exitApp();
+    } else {
+      goBack();
+    }
+  });
+}
+
 /* ================= Icons ================= */
 const ICO = {
   leaf: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 20A7 7 0 0 1 4 13H4a7 7 0 0 1 7-7h1a7 7 0 0 1 7 7v0a7 7 0 0 1-7 7Z"/><path d="M11 20V9"/></svg>`,
