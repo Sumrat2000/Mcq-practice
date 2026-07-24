@@ -366,6 +366,78 @@ footer.note{text-align:center;font-size:11.5px;color:var(--moss);margin-top:30px
   background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s;
 }
 .switch.on .knob{left:23px;}
+
+/* ---------- search box ---------- */
+.search-box{
+  position:relative;display:flex;align-items:center;
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:0 12px;margin:4px 0 18px;box-shadow:var(--shadow);
+  transition:border-color .2s, box-shadow .2s;
+}
+.search-box:focus-within{border-color:var(--leaf);}
+.search-box .search-ico{display:flex;align-items:center;color:var(--moss);flex-shrink:0;}
+.search-box input{
+  flex:1;border:none;background:transparent;outline:none;padding:13px 10px;
+  font-size:14.5px;color:var(--ink);font-family:'Hind Siliguri',sans-serif;
+}
+.search-box input::placeholder{color:#9aa896;}
+.search-clear-btn{
+  border:none;background:var(--paper-2);color:var(--moss);width:24px;height:24px;
+  border-radius:50%;cursor:pointer;font-size:12px;flex-shrink:0;
+}
+.search-result-card{
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:14px 16px;margin-bottom:10px;cursor:pointer;box-shadow:var(--shadow);
+  animation:fadeSlideIn .25s ease both;
+}
+.sr-unit-tag{font-size:11px;color:var(--leaf-deep);font-weight:600;margin-bottom:5px;}
+.sr-question{font-size:14px;color:var(--ink);line-height:1.5;}
+.sr-answer{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:13px;color:var(--forest);}
+.sr-explain{margin-top:4px;font-size:12.5px;color:var(--moss);font-weight:400;line-height:1.5;}
+.sr-goto-btn{
+  margin-top:10px;border:1px solid var(--leaf);background:transparent;color:var(--leaf-deep);
+  border-radius:10px;padding:7px 12px;font-size:12.5px;cursor:pointer;font-family:'Hind Siliguri',sans-serif;
+}
+.empty-state{text-align:center;color:var(--moss);padding:30px 10px;font-size:13.5px;}
+
+/* ---------- smooth animations everywhere ---------- */
+@keyframes fadeSlideIn{
+  from{opacity:0; transform:translateY(10px);}
+  to{opacity:1; transform:translateY(0);}
+}
+@keyframes fadeIn{
+  from{opacity:0;}
+  to{opacity:1;}
+}
+#view-body{
+  animation:fadeSlideIn .28s cubic-bezier(.22,.9,.32,1) both;
+}
+.qcard{
+  animation:fadeSlideIn .3s cubic-bezier(.22,.9,.32,1) both;
+  transition:box-shadow .25s ease, transform .15s ease;
+}
+.hero, .folder-card, .mode-card, .stat, .settings-toggle, .unit-card{
+  animation:fadeSlideIn .3s cubic-bezier(.22,.9,.32,1) both;
+}
+.folder-card:nth-child(2){animation-delay:.04s;}
+.folder-card:nth-child(3){animation-delay:.08s;}
+.folder-card:nth-child(4){animation-delay:.12s;}
+.opt-btn, .exam-opt{
+  transition:background-color .25s ease, border-color .25s ease, transform .12s ease, color .25s ease;
+}
+.opt-btn:active, .exam-opt:active, .folder-card:active, .mode-card:active,
+.unit-card:active, .big-btn:active, .quick-btn:active, .sr-goto-btn:active{
+  transform:scale(.97);
+}
+.explain{
+  animation:fadeIn .35s ease both;
+}
+.big-btn, .pill, .switch, .chev, .folder-card, .mode-card, .unit-card{
+  transition:transform .15s ease, background-color .2s ease, border-color .2s ease, opacity .2s ease;
+}
+.pager-num, .toggle-move-end{
+  transition:background-color .2s ease, color .2s ease;
+}
 </style>
 </head>
 <body>
@@ -473,6 +545,7 @@ let state = {
   builderUnits: new Set(UNITS.map(u=>u.id)),
   pendingAnswerKey: {}, // unitId -> _key of most-recently-answered question (kept visible before moving to end)
   navStack: [],
+  searchQuery: '',
 };
 
 function nav(view, extra={}){
@@ -662,6 +735,21 @@ function viewHTML(){
 }
 
 /* ================= HOME ================= */
+function searchAllQuestions(query){
+  const q = query.trim().toLowerCase();
+  if(!q) return [];
+  const results = [];
+  UNITS.forEach(u=>{
+    const qs = allQuestionsFor(u.id);
+    qs.forEach(item=>{
+      const hay = (item.question + ' ' + item.options.join(' ')).toLowerCase();
+      if(hay.includes(q)){
+        results.push({unitId:u.id, unitName:u.name, item});
+      }
+    });
+  });
+  return results.slice(0, 60); // cap for performance
+}
 function homeHTML(){
   const totalQ = UNITS.reduce((s,u)=>s+u.questions.length,0);
   let totalExams=0, avgScoreSum=0, avgScoreCnt=0;
@@ -669,6 +757,58 @@ function homeHTML(){
   MIXED_EXAMS.forEach(e=>{ totalExams++; avgScoreSum+=pct(Math.max(0,e.score),e.total); avgScoreCnt++; });
   const avgScore = avgScoreCnt? Math.round(avgScoreSum/avgScoreCnt) : null;
   const favCount = FAVORITES.size;
+
+  const searchQ = state.searchQuery || '';
+  const searchResults = searchQ.trim() ? searchAllQuestions(searchQ) : [];
+  const searchBoxHTML = `
+    <div class="search-box">
+      <span class="search-ico">${ICO.leaf.replace('currentColor','var(--forest)').replace('width="20" height="20"','width="16" height="16"')}</span>
+      <input type="text" id="home-search" placeholder="প্রশ্ন খুঁজো... (যেকোনো শব্দ লিখো)" value="${esc(searchQ)}" autocomplete="off">
+      ${searchQ ? `<button id="search-clear" class="search-clear-btn">✕</button>` : ''}
+    </div>
+  `;
+
+  let bodyHTML;
+  if(searchQ.trim()){
+    bodyHTML = `
+      <div class="section-label">${searchResults.length} টি ফলাফল পাওয়া গেছে</div>
+      ${searchResults.length ? searchResults.map((r,i)=>`
+        <div class="search-result-card" data-ridx="${i}">
+          <div class="sr-unit-tag">ইউনিট ${r.unitId} · ${esc(r.unitName)}</div>
+          <div class="sr-question">${esc(r.item.question)}</div>
+          <div class="sr-answer" style="display:none;">
+            <b>${['ক','খ','গ','ঘ'][r.item.correct]})</b> ${esc(r.item.options[r.item.correct])}
+            ${r.item.explanation? `<div class="sr-explain">${esc(r.item.explanation)}</div>`:''}
+          </div>
+          <button class="sr-goto-btn" data-uid="${r.unitId}">এই ইউনিটে যাও →</button>
+        </div>
+      `).join('') : `<div class="empty-state">কোনো প্রশ্ন পাওয়া যায়নি। অন্য শব্দ দিয়ে খোঁজো।</div>`}
+    `;
+  } else {
+    bodyHTML = `
+    <div class="folder-grid">
+      <button class="folder-card" id="btn-go-units">
+        <div class="folder-icon" style="background:linear-gradient(155deg,var(--forest),var(--leaf));">${ICO.folder}</div>
+        <h3>ইউনিটসমূহ</h3>
+        <p>১০টি ইউনিট ধরে পড়ো ও অনুশীলন করো</p>
+      </button>
+      <button class="folder-card" id="btn-go-exam">
+        <div class="folder-icon" style="background:linear-gradient(155deg,#c65a3a,var(--rust));">${ICO.clock}</div>
+        <h3>পরীক্ষা</h3>
+        <p>একাধিক ইউনিট বেছে নিয়ে টাইমড পরীক্ষা দাও</p>
+      </button>
+      <button class="folder-card" id="btn-go-stats">
+        <div class="folder-icon" style="background:linear-gradient(155deg,#3d7a9c,#5a9bbd);">${ICO.chart}</div>
+        <h3>পরিসংখ্যান</h3>
+        <p>তোমার পড়া ও ফলাফলের অগ্রগতি দেখো</p>
+      </button>
+      <button class="folder-card" id="btn-go-favorites">
+        <div class="folder-icon" style="background:linear-gradient(155deg,#c94d6d,#e0708a);">${ICO.heartFill}</div>
+        <h3>ফেভারিট</h3>
+        <p>${favCount? favCount+'টি পছন্দের প্রশ্ন':'পছন্দের প্রশ্ন জমাও'}</p>
+      </button>
+    </div>`;
+  }
 
   return `
   ${!STORAGE_OK? `<div style="background:#fbe9e5;border:1px solid var(--rust);border-radius:14px;padding:12px 16px;margin-bottom:16px;font-size:12.5px;color:var(--rust-deep);line-height:1.6;">⚠️ এই ব্রাউজারে সংরক্ষণ (storage) চালু করা যায়নি, তাই তোমার পড়া/এডিট/পরীক্ষার ফলাফল সেভ হবে না।</div>`:''}
@@ -683,28 +823,9 @@ function homeHTML(){
     </div>
   </div>
 
-  <div class="folder-grid">
-    <button class="folder-card" id="btn-go-units">
-      <div class="folder-icon" style="background:linear-gradient(155deg,var(--forest),var(--leaf));">${ICO.folder}</div>
-      <h3>ইউনিটসমূহ</h3>
-      <p>১০টি ইউনিট ধরে পড়ো ও অনুশীলন করো</p>
-    </button>
-    <button class="folder-card" id="btn-go-exam">
-      <div class="folder-icon" style="background:linear-gradient(155deg,#c65a3a,var(--rust));">${ICO.clock}</div>
-      <h3>পরীক্ষা</h3>
-      <p>একাধিক ইউনিট বেছে নিয়ে টাইমড পরীক্ষা দাও</p>
-    </button>
-    <button class="folder-card" id="btn-go-stats">
-      <div class="folder-icon" style="background:linear-gradient(155deg,#3d7a9c,#5a9bbd);">${ICO.chart}</div>
-      <h3>পরিসংখ্যান</h3>
-      <p>তোমার পড়া ও ফলাফলের অগ্রগতি দেখো</p>
-    </button>
-    <button class="folder-card" id="btn-go-favorites">
-      <div class="folder-icon" style="background:linear-gradient(155deg,#c94d6d,#e0708a);">${ICO.heartFill}</div>
-      <h3>ফেভারিট</h3>
-      <p>${favCount? favCount+'টি পছন্দের প্রশ্ন':'পছন্দের প্রশ্ন জমাও'}</p>
-    </button>
-  </div>
+  ${searchBoxHTML}
+  ${bodyHTML}
+
   <footer class="note">তৈরি করেছেন <b style="color:var(--forest);">Shahriar Sumrat</b></footer>
   `;
 }
@@ -713,6 +834,40 @@ function attachHome(){
   document.getElementById('btn-go-exam').onclick = ()=> nav('examBuilder',{unitId:null});
   document.getElementById('btn-go-stats').onclick = ()=> nav('stats');
   document.getElementById('btn-go-favorites').onclick = ()=> nav('favorites');
+
+  const searchInput = document.getElementById('home-search');
+  if(searchInput){
+    // keep focus + cursor position across re-renders while typing
+    const restoreFocus = state._searchWasFocused;
+    if(restoreFocus){
+      searchInput.focus();
+      const pos = searchInput.value.length;
+      searchInput.setSelectionRange(pos,pos);
+    }
+    searchInput.oninput = ()=>{
+      state.searchQuery = searchInput.value;
+      state._searchWasFocused = true;
+      render();
+    };
+    searchInput.onblur = ()=>{ state._searchWasFocused = false; };
+  }
+  const clearBtn = document.getElementById('search-clear');
+  if(clearBtn) clearBtn.onclick = ()=>{ state.searchQuery=''; state._searchWasFocused=false; render(); };
+
+  document.querySelectorAll('.search-result-card').forEach(card=>{
+    card.addEventListener('click', (e)=>{
+      if(e.target.classList.contains('sr-goto-btn')) return; // handled separately below
+      const ans = card.querySelector('.sr-answer');
+      if(ans) ans.style.display = ans.style.display==='none' ? 'block' : 'none';
+    });
+  });
+  document.querySelectorAll('.sr-goto-btn').forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      state.searchQuery = '';
+      nav('study', {unitId: Number(btn.dataset.uid)});
+    };
+  });
 }
 
 /* ================= UNITS LIST ================= */
