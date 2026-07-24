@@ -1132,6 +1132,9 @@ function attachStudy(){
 function attachEditCards(uid){
   document.querySelectorAll('.edit-card').forEach(card=>{
     const key = card.dataset.key;
+    attachAutoFixPaste(card.querySelector('[data-f="question"]'));
+    [0,1,2,3].forEach(i=>attachAutoFixPaste(card.querySelector(`[data-f="opt${i}"]`)));
+    attachAutoFixPaste(card.querySelector('[data-f="explanation"]'));
     card.querySelectorAll('.correct-pill').forEach(p=>{
       p.onclick = ()=>{
         card.querySelectorAll('.correct-pill').forEach(x=>x.classList.remove('active'));
@@ -1149,9 +1152,9 @@ function attachEditCards(uid){
     };
     card.querySelector('[data-act="save"]').onclick = async ()=>{
       const edits = ensureUnitEdits(uid);
-      const question = card.querySelector('[data-f="question"]').value.trim();
-      const options = [0,1,2,3].map(i=>card.querySelector(`[data-f="opt${i}"]`).value.trim());
-      const explanation = card.querySelector('[data-f="explanation"]').value.trim();
+      const question = fixBengaliSpacing(card.querySelector('[data-f="question"]').value.trim());
+      const options = [0,1,2,3].map(i=>fixBengaliSpacing(card.querySelector(`[data-f="opt${i}"]`).value.trim()));
+      const explanation = fixBengaliSpacing(card.querySelector('[data-f="explanation"]').value.trim());
       const correctSel = card.querySelector('.correct-pill.active');
       const correct = correctSel? Number(correctSel.dataset.oi) : 0;
       if(!question || options.some(o=>!o)){ alert('প্রশ্ন ও সবগুলো অপশন লিখতে হবে।'); return; }
@@ -1404,7 +1407,37 @@ function statsHTML(){
 function attachStats(){}
 
 /* ================= CUSTOM QUESTIONS (write your own) ================= */
-function parsePastedMCQ(raw){
+/* Fixes a common copy-paste corruption where PDFs insert stray spaces
+   around Bengali matras/conjunct marks, e.g. "জন্ য" -> "জন্য",
+   "বাইর ে" -> "বাইরে", "সৃষ ্ ট ি" -> "সৃষ্টি". */
+const BN_COMBINING = '\u0981\u0982\u0983\u09BC\u09BE\u09BF\u09C0\u09C1\u09C2\u09C3\u09C4\u09C7\u09C8\u09CB\u09CC\u09CD\u09D7';
+const BN_COMBINING_RE = new RegExp('\\s+([' + BN_COMBINING + '])', 'g');
+const BN_VIRAMA_RE = /(\u09CD)\s+/g;
+function fixBengaliSpacing(text){
+  if(!text) return text;
+  let fixed = text.replace(BN_COMBINING_RE, '$1');
+  fixed = fixed.replace(BN_VIRAMA_RE, '$1');
+  return fixed;
+}
+/* Auto-clean a text input/textarea whenever the user pastes into it. */
+function attachAutoFixPaste(el){
+  if(!el) return;
+  el.addEventListener('paste', ()=>{
+    setTimeout(()=>{
+      const fixed = fixBengaliSpacing(el.value);
+      if(fixed !== el.value){
+        const pos = el.selectionStart;
+        const diff = el.value.length - fixed.length;
+        el.value = fixed;
+        try{ el.setSelectionRange(Math.max(0,pos-diff), Math.max(0,pos-diff)); }catch(e){}
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }, 0);
+  });
+}
+
+function parsePastedMCQ(rawInput){
+  const raw = fixBengaliSpacing(rawInput);
   const lines = raw.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
   // matches: ক. ক) ক: ক- , A. A) A: A- , ১. ১) , 1. 1)  as a line-starting option marker
   const optionPrefixRe = /^[\(\[]?([কখগঘABCDabcd১২৩৪1234])[\.\)\:।\-]\s*/;
@@ -1494,6 +1527,9 @@ function customHTML(){
 }
 function attachCustom(){
   const u = UNITS.find(x=>x.id===state.unitId);
+  ['cf-paste','cf-question','cf-opt0','cf-opt1','cf-opt2','cf-opt3','cf-explanation'].forEach(id=>{
+    attachAutoFixPaste(document.getElementById(id));
+  });
   document.querySelectorAll('#cf-correct-pills .pill').forEach(p=>{
     p.onclick = ()=>{
       document.querySelectorAll('#cf-correct-pills .pill').forEach(x=>x.classList.remove('active'));
@@ -1524,9 +1560,9 @@ function attachCustom(){
     }
   };
   document.getElementById('btn-add-custom').onclick = async ()=>{
-    const question = document.getElementById('cf-question').value.trim();
-    const options = [0,1,2,3].map(i=>document.getElementById('cf-opt'+i).value.trim());
-    const explanation = document.getElementById('cf-explanation').value.trim();
+    const question = fixBengaliSpacing(document.getElementById('cf-question').value.trim());
+    const options = [0,1,2,3].map(i=>fixBengaliSpacing(document.getElementById('cf-opt'+i).value.trim()));
+    const explanation = fixBengaliSpacing(document.getElementById('cf-explanation').value.trim());
     const correctPill = document.querySelector('#cf-correct-pills .pill.active');
     const correct = correctPill? Number(correctPill.dataset.oi) : 0;
     if(!question || options.some(o=>!o)){ alert('প্রশ্ন ও চারটি অপশনই লিখতে হবে।'); return; }
