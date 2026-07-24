@@ -48,13 +48,12 @@ body{
   padding:6px 2px 18px;
 }
 .topbar .leaf-badge{
-  width:22px;height:22px;border-radius:7px;
+  width:42px;height:42px;border-radius:12px;
   background:linear-gradient(155deg,var(--forest),var(--forest-light));
   display:flex;align-items:center;justify-content:center;
   box-shadow:var(--shadow);
   flex-shrink:0;
 }
-.topbar .leaf-badge svg{width:11px;height:11px;}
 .topbar h1{
   font-family:'Baloo Da 2',sans-serif;
   font-size:20px;font-weight:700;color:var(--forest);margin:0;line-height:1.2;
@@ -73,21 +72,21 @@ body{
 /* ---------- home ---------- */
 .hero{
   background:linear-gradient(160deg,var(--forest) 0%, var(--forest-light) 60%, var(--leaf) 130%);
-  border-radius:14px;padding:10px 12px;color:#f5f1e2;position:relative;overflow:hidden;
-  margin-bottom:20px;
+  border-radius:16px;padding:14px 16px;color:#f5f1e2;position:relative;overflow:hidden;
+  margin-bottom:16px;
   box-shadow:var(--shadow);
 }
 .hero::after{
   content:"";position:absolute;right:-30px;top:-30px;width:160px;height:160px;
   background:radial-gradient(circle, rgba(255,255,255,0.12), transparent 70%);
 }
-.hero .eyebrow{font-size:9px;letter-spacing:.06em;color:#cfe3d3;font-weight:600;font-family:'Hind Siliguri';}
-.hero h2{font-family:'Baloo Da 2';font-size:14px;margin:3px 0 4px;line-height:1.25;}
-.hero p{font-size:10.5px;color:#dfeee1;margin:0;line-height:1.4;max-width:46ch;}
-.hero .stat-row{display:flex;gap:10px;margin-top:7px;flex-wrap:wrap;}
+.hero .eyebrow{font-size:10.5px;letter-spacing:.08em;color:#cfe3d3;font-weight:600;font-family:'Hind Siliguri';}
+.hero h2{font-family:'Baloo Da 2';font-size:18px;margin:4px 0 5px;line-height:1.3;}
+.hero p{font-size:12px;color:#dfeee1;margin:0;line-height:1.5;max-width:46ch;}
+.hero .stat-row{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;}
 .hero .stat{font-family:'JetBrains Mono';}
-.hero .stat b{font-size:13px;display:block;}
-.hero .stat span{font-size:9px;color:#cfe3d3;}
+.hero .stat b{font-size:16px;display:block;}
+.hero .stat span{font-size:10px;color:#cfe3d3;}
 
 .section-label{
   font-size:12.5px;font-weight:700;color:var(--moss);letter-spacing:.03em;
@@ -437,6 +436,16 @@ footer.note{text-align:center;font-size:11.5px;color:var(--moss);margin-top:30px
 .search-hl{
   color:var(--leaf-deep); background:#eaf3ec; padding:0 2px; border-radius:3px; font-weight:700;
 }
+.paste-box{
+  background:var(--paper-2); border:1.5px dashed var(--leaf); border-radius:12px;
+  padding:12px 14px; margin-bottom:18px;
+}
+.paste-box label{display:block;font-size:12px;color:var(--moss);margin-bottom:6px;font-weight:600;}
+.paste-box textarea{
+  width:100%; border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+  font-size:13.5px; font-family:'Hind Siliguri',sans-serif; color:var(--ink); background:var(--card);
+  resize:vertical;
+}
 </style>
 </head>
 <body>
@@ -446,11 +455,12 @@ footer.note{text-align:center;font-size:11.5px;color:var(--moss);margin-top:30px
 /* ================= Data & Storage ================= */
 const UNITS = JSON.parse(document.getElementById('app-data').textContent);
 let CUSTOM_Q = {}; // unitId -> array (user-written questions)
+let EXCLUDED_Q = {}; // unitId -> array of keys (hidden original PDF questions)
 let PROGRESS = {}; // unitId -> {seen:{}, correct:{}, exams:[]}
 let EDITS = {}; // unitId -> { mcq: {key: {question,options,explanation,correct}} }
 let MIXED_EXAMS = []; // array of {date, unitIds:[], score, total, took}
 let storageReady = false;
-const LS_KEYS = {progress:'bioapp_progress', custom:'bioapp_custom', edits:'bioapp_edits', mixed:'bioapp_mixed_exams', settings:'bioapp_settings', favorites:'bioapp_favorites'};
+const LS_KEYS = {progress:'bioapp_progress', custom:'bioapp_custom', edits:'bioapp_edits', mixed:'bioapp_mixed_exams', settings:'bioapp_settings', favorites:'bioapp_favorites', excluded:'bioapp_excluded'};
 let SETTINGS = {moveAnsweredToEnd: false};
 let FAVORITES = new Set(); // set of "uid:key" strings
 
@@ -478,6 +488,7 @@ async function loadStorage(){
   PROGRESS = lsGet(LS_KEYS.progress);
   CUSTOM_Q = lsGet(LS_KEYS.custom);
   EDITS = lsGet(LS_KEYS.edits);
+  EXCLUDED_Q = lsGet(LS_KEYS.excluded);
   MIXED_EXAMS = lsGetArr(LS_KEYS.mixed);
   const s = lsGet(LS_KEYS.settings);
   SETTINGS = {moveAnsweredToEnd: false, ...s};
@@ -487,6 +498,7 @@ async function loadStorage(){
 async function saveProgress(){ lsSet(LS_KEYS.progress, PROGRESS); }
 async function saveCustom(){ lsSet(LS_KEYS.custom, CUSTOM_Q); }
 async function saveEdits(){ lsSet(LS_KEYS.edits, EDITS); }
+async function saveExcluded(){ lsSet(LS_KEYS.excluded, EXCLUDED_Q); }
 async function saveMixedExams(){ lsSet(LS_KEYS.mixed, MIXED_EXAMS); }
 async function saveSettings(){ lsSet(LS_KEYS.settings, SETTINGS); }
 async function saveFavorites(){ lsSet(LS_KEYS.favorites, Array.from(FAVORITES)); }
@@ -521,10 +533,11 @@ function ensureUnitProgress(uid){
 }
 function allQuestionsFor(uid){
   const edits = (EDITS[uid]&&EDITS[uid].mcq) || {};
+  const excluded = new Set(EXCLUDED_Q[uid] || []);
   const base = (UNITS.find(u=>u.id===uid).questions || []).map((q,i)=>{
     const k='p'+i; const e = edits[k];
     return {...q, ...(e||{}), _key:k, source:'pdf', edited: !!e, unitId:uid};
-  });
+  }).filter(q => !excluded.has(q._key));
   const custom = (CUSTOM_Q[uid]||[]).map((q,i)=>{
     const k='c'+i; const e = edits[k];
     return {...q, ...(e||{}), _key:k, source:'custom', edited: !!e, unitId:uid};
@@ -1048,6 +1061,7 @@ function studyHTML(){
 }
 function editFormHTML(q, idx){
   const labels=['ক','খ','গ','ঘ'];
+  const isCustom = q._key.startsWith('c');
   return `<div class="qcard edit-card" data-key="${q._key}">
     <span class="qnum font-mono">প্রশ্ন ${idx+1} এডিট করছো</span>
     <div class="edit-field"><label>প্রশ্ন</label><textarea rows="2" data-f="question">${esc(q.question)}</textarea></div>
@@ -1064,6 +1078,9 @@ function editFormHTML(q, idx){
       ${q.edited? `<button class="big-btn ghost" data-act="reset" data-key="${q._key}" style="color:var(--rust-deep);border-color:var(--rust);">মূল লেখায় ফিরুন</button>`:''}
       <button class="big-btn" data-act="save" data-key="${q._key}">সংরক্ষণ করো</button>
     </div>
+    <button class="big-btn ghost" data-act="delete" data-key="${q._key}" style="margin-top:8px;color:var(--rust-deep);border-color:var(--rust);width:100%;">
+      ${isCustom? '🗑️ প্রশ্নটি মুছে ফেলো' : '🚫 এই প্রশ্নটি লুকিয়ে ফেলো'}
+    </button>
   </div>`;
 }
 function attachStudy(){
@@ -1141,6 +1158,29 @@ function attachEditCards(uid){
       edits.mcq[key] = {question, options, explanation, correct};
       state.editOpen.delete(key);
       await saveEdits();
+      render();
+    };
+    const deleteBtn = card.querySelector('[data-act="delete"]');
+    if(deleteBtn) deleteBtn.onclick = async ()=>{
+      const isCustom = key.startsWith('c');
+      const confirmMsg = isCustom
+        ? 'এই প্রশ্নটি স্থায়ীভাবে মুছে ফেলা হবে। আগাতে চাও?'
+        : 'এই প্রশ্নটি তোমার প্র্যাকটিস ও পরীক্ষা থেকে লুকিয়ে ফেলা হবে। আগাতে চাও?';
+      if(!confirm(confirmMsg)) return;
+      if(isCustom){
+        const idx = Number(key.slice(1));
+        CUSTOM_Q[uid].splice(idx,1);
+        if(EDITS[uid]){
+          Object.keys(EDITS[uid].mcq||{}).forEach(k=>{ if(k.startsWith('c')) delete EDITS[uid].mcq[k]; });
+        }
+        await saveCustom();
+        await saveEdits();
+      } else {
+        if(!EXCLUDED_Q[uid]) EXCLUDED_Q[uid] = [];
+        if(!EXCLUDED_Q[uid].includes(key)) EXCLUDED_Q[uid].push(key);
+        await saveExcluded();
+      }
+      state.editOpen.delete(key);
       render();
     };
   });
@@ -1364,6 +1404,47 @@ function statsHTML(){
 function attachStats(){}
 
 /* ================= CUSTOM QUESTIONS (write your own) ================= */
+function parsePastedMCQ(raw){
+  const lines = raw.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
+  // matches: ক. ক) ক: ক- , A. A) A: A- , ১. ১) , 1. 1)  as a line-starting option marker
+  const optionPrefixRe = /^[\(\[]?([কখগঘABCDabcd১২৩৪1234])[\.\)\:।\-]\s*/;
+  // matches an "উত্তর/Answer: X" line to auto-detect the correct option, if present
+  const answerLineRe = /^(উত্তর|সঠিক\s*উত্তর|answer|ans)[\s:।\-]*[\(\[]?([কখগঘABCDabcd১২৩৪1234])[\.\)\]]?/i;
+
+  const questionLines = [];
+  const optionLines = [];
+  let detectedCorrect = null;
+  let seenFirstOption = false;
+
+  const keyToIndex = (k)=>{
+    const map = {'ক':0,'খ':1,'গ':2,'ঘ':3,'a':0,'b':1,'c':2,'d':3,'১':0,'২':1,'৩':2,'৪':3,'1':0,'2':1,'3':2,'4':3};
+    return map[k.toLowerCase ? k.toLowerCase() : k] ?? map[k];
+  };
+
+  for(const line of lines){
+    const ansMatch = line.match(answerLineRe);
+    if(ansMatch){
+      detectedCorrect = keyToIndex(ansMatch[2]);
+      continue;
+    }
+    const optMatch = line.match(optionPrefixRe);
+    if(optMatch){
+      seenFirstOption = true;
+      optionLines.push(line.replace(optionPrefixRe,'').trim());
+    } else if(!seenFirstOption){
+      questionLines.push(line);
+    } else if(optionLines.length){
+      // wrapped continuation of the previous option's text
+      optionLines[optionLines.length-1] += ' ' + line;
+    }
+  }
+
+  return {
+    question: questionLines.join(' ').trim(),
+    options: optionLines.slice(0,4),
+    correct: detectedCorrect
+  };
+}
 function customHTML(){
   const u = UNITS.find(x=>x.id===state.unitId);
   const list = (CUSTOM_Q[u.id]||[]).map((q,i)=>({...q, _key:'c'+i}));
@@ -1372,6 +1453,13 @@ function customHTML(){
   return `<div class="ai-box" style="margin-bottom:18px;">
     <h4 class="font-display" style="margin:0 0 6px;font-size:17px;">${ICO.plus} নিজের প্রশ্ন লেখো</h4>
     <p style="font-size:13px;color:var(--moss);line-height:1.6;margin:0 0 16px;">"${esc(u.name)}" ইউনিটে নিজে MCQ লিখে যোগ করো — এটা তোমার পড়া ও পরীক্ষার তালিকায় যুক্ত হয়ে যাবে।</p>
+
+    <div class="paste-box">
+      <label>কোথাও থেকে কপি করা প্রশ্ন এখানে পেস্ট করো (ঐচ্ছিক)</label>
+      <textarea rows="5" id="cf-paste" placeholder="যেমনঃ&#10;তোমার নাম কি?&#10;ক. রাকিব&#10;খ. সাকিব&#10;গ. নিলয়&#10;ঘ. হাসান"></textarea>
+      <button class="big-btn ghost" id="btn-parse-paste" type="button" style="margin-top:8px;">${ICO.refresh} প্রশ্ন ও অপশন আলাদা করে বসাও</button>
+    </div>
+
     <div class="edit-field"><label>প্রশ্ন</label><textarea rows="2" id="cf-question" placeholder="প্রশ্ন লেখো..."></textarea></div>
     ${[0,1,2,3].map(oi=>`<div class="edit-field"><label>অপশন ${labels[oi]}</label><textarea rows="1" id="cf-opt${oi}" placeholder="অপশন ${labels[oi]}"></textarea></div>`).join('')}
     <div class="edit-field">
@@ -1412,6 +1500,29 @@ function attachCustom(){
       p.classList.add('active');
     };
   });
+  const parseBtn = document.getElementById('btn-parse-paste');
+  if(parseBtn) parseBtn.onclick = ()=>{
+    const raw = document.getElementById('cf-paste').value;
+    if(!raw.trim()){ alert('আগে উপরের বাক্সে প্রশ্নটা পেস্ট করো।'); return; }
+    const parsed = parsePastedMCQ(raw);
+    if(!parsed.question){ alert('প্রশ্নের লেখাটা বুঝতে পারলাম না, একটু ঠিক করে চেষ্টা করো।'); return; }
+    document.getElementById('cf-question').value = parsed.question;
+    [0,1,2,3].forEach(i=>{
+      document.getElementById('cf-opt'+i).value = parsed.options[i] || '';
+    });
+    if(parsed.correct !== null){
+      document.querySelectorAll('#cf-correct-pills .pill').forEach(x=>x.classList.remove('active'));
+      const pill = document.querySelector(`#cf-correct-pills .pill[data-oi="${parsed.correct}"]`);
+      if(pill) pill.classList.add('active');
+    }
+    document.getElementById('cf-paste').value = '';
+    autosizeTextareas();
+    if(parsed.options.length < 4){
+      alert('প্রশ্ন বসানো হয়েছে, কিন্তু ৪টার কম অপশন পাওয়া গেছে — বাকিগুলো নিজে লিখে দাও।');
+    } else if(parsed.correct === null){
+      alert('প্রশ্ন ও অপশন বসানো হয়েছে। এখন সঠিক উত্তরটা বেছে দাও।');
+    }
+  };
   document.getElementById('btn-add-custom').onclick = async ()=>{
     const question = document.getElementById('cf-question').value.trim();
     const options = [0,1,2,3].map(i=>document.getElementById('cf-opt'+i).value.trim());
