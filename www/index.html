@@ -220,7 +220,7 @@ body{
 }
 .edit-field textarea:focus{outline:none;border-color:var(--amber);}
 .pill.correct-pill{padding:8px 14px;}
-.study-tally{display:flex;gap:10px;margin-bottom:10px;}
+.study-tally{display:flex;gap:10px;margin:14px 0 10px;justify-content:center;}
 .study-tally span{
   font-family:'JetBrains Mono';font-size:13px;font-weight:700;
   padding:5px 12px;border-radius:20px;
@@ -569,6 +569,7 @@ let state = {
   pendingAnswerKey: {}, // unitId -> _key of most-recently-answered question (kept visible before moving to end)
   navStack: [],
   searchQuery: '',
+  sessionTally: {correct:0, wrong:0},
 };
 
 function nav(view, extra={}){
@@ -884,6 +885,7 @@ function attachHomeBodyArea(){
     btn.onclick = (e)=>{
       e.stopPropagation();
       state.searchQuery = '';
+      state.sessionTally = {correct:0, wrong:0};
       nav('study', {unitId: Number(btn.dataset.uid)});
     };
   });
@@ -986,7 +988,7 @@ function unitHTML(){
   `;
 }
 function attachUnit(){
-  document.getElementById('btn-study').onclick = ()=> nav('study',{unitId:state.unitId, studyPage:1});
+  document.getElementById('btn-study').onclick = ()=> { state.sessionTally = {correct:0, wrong:0}; nav('study',{unitId:state.unitId, studyPage:1}); };
   document.getElementById('btn-exam').onclick = ()=> nav('examConfig',{unitId:state.unitId});
   document.getElementById('btn-custom').onclick = ()=> nav('custom',{unitId:state.unitId});
   const r = document.getElementById('btn-reset-progress');
@@ -1000,6 +1002,13 @@ function attachUnit(){
 }
 
 /* ================= STUDY / PRACTICE ================= */
+function sessionTallyHTML(){
+  const t = state.sessionTally || {correct:0, wrong:0};
+  return `<div class="study-tally">
+    <span class="tally-correct">✓ ${t.correct}</span>
+    <span class="tally-wrong">✗ ${t.wrong}</span>
+  </div>`;
+}
 function studyHTML(){
   const u = UNITS.find(x=>x.id===state.unitId);
   let qs = allQuestionsFor(u.id);
@@ -1036,20 +1045,7 @@ function studyHTML(){
     <button class="switch ${SETTINGS.moveAnsweredToEnd?'on':''}" id="toggle-move-end"><span class="knob"></span></button>
   </div>`;
 
-  let correctCount = 0, wrongCount = 0;
-  qs.forEach(q => {
-    if(prog.seen && prog.seen[q._key] !== undefined){
-      if(prog.seen[q._key] === q.correct) correctCount++;
-      else wrongCount++;
-    }
-  });
-  const tallyHTML = `<div class="study-tally">
-    <span class="tally-correct">✓ ${correctCount}</span>
-    <span class="tally-wrong">✗ ${wrongCount}</span>
-  </div>`;
-
   return `<div class="section-label">সব প্রশ্ন (${qs.length}টি) — পেজ ${page}/${totalPages}, উত্তরে ট্যাপ করো</div>
-    ${tallyHTML}
     ${toggleHTML}
     ${pagerHTML}
     ${pageQs.map((q,pidx)=>{
@@ -1080,6 +1076,7 @@ function studyHTML(){
         ${answered? `<div class="explain"><b>ব্যাখ্যা:</b> ${esc(q.explanation||'কোনো ব্যাখ্যা দেওয়া নেই।')}</div>`:''}
       </div>`;
     }).join('')}
+    ${sessionTallyHTML()}
     ${pagerHTML}
   `;
 }
@@ -1144,6 +1141,8 @@ function attachStudy(){
         const prog = ensureUnitProgress(u.id);
         prog.seen[key] = oi;
         if(oi===q.correct) prog.correct[key]=true; else delete prog.correct[key];
+        if(!state.sessionTally) state.sessionTally = {correct:0, wrong:0};
+        if(oi===q.correct) state.sessionTally.correct++; else state.sessionTally.wrong++;
         state.pendingAnswerKey[u.id] = key;
         await saveProgress();
         const scrollY = window.scrollY;
