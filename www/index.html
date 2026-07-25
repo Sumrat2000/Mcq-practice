@@ -451,16 +451,12 @@ footer.note{text-align:center;font-size:11.5px;color:var(--moss);margin-top:30px
 .search-hl{
   color:var(--leaf-deep); background:#eaf3ec; padding:0 2px; border-radius:3px; font-weight:700;
 }
-.paste-box{
-  background:var(--paper-2); border:1.5px dashed var(--leaf); border-radius:12px;
-  padding:12px 14px; margin-bottom:18px;
+.q-label-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;}
+.split-icon-btn{
+  border:none; background:var(--paper-2); width:26px; height:26px; border-radius:8px;
+  cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; padding:0;
 }
-.paste-box label{display:block;font-size:12px;color:var(--moss);margin-bottom:6px;font-weight:600;}
-.paste-box textarea{
-  width:100%; border:1px solid var(--line); border-radius:10px; padding:10px 12px;
-  font-size:13.5px; font-family:'Hind Siliguri',sans-serif; color:var(--ink); background:var(--card);
-  resize:vertical;
-}
+.split-icon-btn:active{transform:scale(0.9);}
 </style>
 </head>
 <body>
@@ -1515,13 +1511,13 @@ function customHTML(){
     <h4 class="font-display" style="margin:0 0 6px;font-size:17px;">${ICO.plus} নিজের প্রশ্ন লেখো</h4>
     <p style="font-size:13px;color:var(--moss);line-height:1.6;margin:0 0 16px;">"${esc(u.name)}" ইউনিটে নিজে MCQ লিখে যোগ করো — এটা তোমার পড়া ও পরীক্ষার তালিকায় যুক্ত হয়ে যাবে।</p>
 
-    <div class="paste-box">
-      <label>কোথাও থেকে কপি করা প্রশ্ন এখানে পেস্ট করো (ঐচ্ছিক)</label>
-      <textarea rows="5" id="cf-paste" placeholder="যেমনঃ&#10;তোমার নাম কি?&#10;ক. রাকিব&#10;খ. সাকিব&#10;গ. নিলয়&#10;ঘ. হাসান"></textarea>
-      <button class="big-btn ghost" id="btn-parse-paste" type="button" style="margin-top:8px;">${ICO.refresh} প্রশ্ন ও অপশন আলাদা করে বসাও</button>
+    <div class="edit-field">
+      <div class="q-label-row">
+        <label style="margin:0;">প্রশ্ন</label>
+        <button class="split-icon-btn" id="btn-parse-paste" type="button" title="পেস্ট করা লেখা থেকে প্রশ্ন ও অপশন আলাদা করো">✂️</button>
+      </div>
+      <textarea rows="2" id="cf-question" placeholder="প্রশ্ন লেখো, অথবা পুরো প্রশ্ন+অপশন এখানে পেস্ট করে ✂️ চাপো..."></textarea>
     </div>
-
-    <div class="edit-field"><label>প্রশ্ন</label><textarea rows="2" id="cf-question" placeholder="প্রশ্ন লেখো..."></textarea></div>
     ${[0,1,2,3].map(oi=>`<div class="edit-field"><label>অপশন ${labels[oi]}</label><textarea rows="1" id="cf-opt${oi}" placeholder="অপশন ${labels[oi]}"></textarea></div>`).join('')}
     <div class="edit-field">
       <label>সঠিক উত্তর</label>
@@ -1555,7 +1551,7 @@ function customHTML(){
 }
 function attachCustom(){
   const u = UNITS.find(x=>x.id===state.unitId);
-  ['cf-paste','cf-question','cf-opt0','cf-opt1','cf-opt2','cf-opt3','cf-explanation'].forEach(id=>{
+  ['cf-question','cf-opt0','cf-opt1','cf-opt2','cf-opt3','cf-explanation'].forEach(id=>{
     attachAutoFixPaste(document.getElementById(id));
   });
   document.querySelectorAll('#cf-correct-pills .pill').forEach(p=>{
@@ -1566,8 +1562,8 @@ function attachCustom(){
   });
   const parseBtn = document.getElementById('btn-parse-paste');
   if(parseBtn) parseBtn.onclick = ()=>{
-    const raw = document.getElementById('cf-paste').value;
-    if(!raw.trim()){ alert('আগে উপরের বাক্সে প্রশ্নটা পেস্ট করো।'); return; }
+    const raw = document.getElementById('cf-question').value;
+    if(!raw.trim()){ alert('আগে প্রশ্ন বক্সে লেখাটা পেস্ট করো।'); return; }
     const parsed = parsePastedMCQ(raw);
     if(!parsed.question){ alert('প্রশ্নের লেখাটা বুঝতে পারলাম না, একটু ঠিক করে চেষ্টা করো।'); return; }
     document.getElementById('cf-question').value = parsed.question;
@@ -1579,7 +1575,6 @@ function attachCustom(){
       const pill = document.querySelector(`#cf-correct-pills .pill[data-oi="${parsed.correct}"]`);
       if(pill) pill.classList.add('active');
     }
-    document.getElementById('cf-paste').value = '';
     autosizeTextareas();
     if(parsed.options.length < 4){
       alert('প্রশ্ন বসানো হয়েছে, কিন্তু ৪টার কম অপশন পাওয়া গেছে — বাকিগুলো নিজে লিখে দাও।');
