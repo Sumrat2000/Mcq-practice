@@ -203,15 +203,30 @@ body{
 }
 .edit-btn:active{transform:scale(0.93);}
 .edit-card{border-color:var(--amber);}
-.edit-field{margin-bottom:12px;}
-.edit-field label{display:block;font-size:11.5px;font-weight:700;color:var(--amber-deep);margin-bottom:4px;font-family:'JetBrains Mono';}
+.edit-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.edit-icon-row{display:flex;gap:4px;}
+.edit-icon-btn{
+  border:1px solid var(--line);background:var(--paper);
+  width:28px;height:28px;border-radius:8px;cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:14px;padding:0;
+}
+.edit-icon-btn:active{transform:scale(0.9);}
+.edit-field{margin-bottom:8px;}
+.edit-field label{display:block;font-size:11px;font-weight:700;color:var(--amber-deep);margin-bottom:3px;font-family:'JetBrains Mono';}
 .edit-field textarea{
-  width:100%;border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;
-  font-family:'Hind Siliguri',sans-serif;font-size:14px;color:var(--ink);background:var(--paper);
-  resize:vertical;line-height:1.5;
+  width:100%;border:1.5px solid var(--line);border-radius:9px;padding:7px 10px;
+  font-family:'Hind Siliguri',sans-serif;font-size:13.5px;color:var(--ink);background:var(--paper);
+  resize:vertical;line-height:1.4;
 }
 .edit-field textarea:focus{outline:none;border-color:var(--amber);}
 .pill.correct-pill{padding:8px 14px;}
+.study-tally{display:flex;gap:10px;margin-bottom:10px;}
+.study-tally span{
+  font-family:'JetBrains Mono';font-size:13px;font-weight:700;
+  padding:5px 12px;border-radius:20px;
+}
+.tally-correct{background:#e7f4e9;color:var(--leaf-deep);}
+.tally-wrong{background:#fbe9e5;color:var(--rust-deep);}
 .edit-card .exam-nav{flex-wrap:wrap;}
 .edit-card .exam-nav button{flex:1 1 auto;min-width:110px;font-size:13.5px;padding:11px 10px;}
 
@@ -1025,7 +1040,20 @@ function studyHTML(){
     <button class="switch ${SETTINGS.moveAnsweredToEnd?'on':''}" id="toggle-move-end"><span class="knob"></span></button>
   </div>`;
 
+  let correctCount = 0, wrongCount = 0;
+  qs.forEach(q => {
+    if(prog.seen && prog.seen[q._key] !== undefined){
+      if(prog.seen[q._key] === q.correct) correctCount++;
+      else wrongCount++;
+    }
+  });
+  const tallyHTML = `<div class="study-tally">
+    <span class="tally-correct">✓ ${correctCount}</span>
+    <span class="tally-wrong">✗ ${wrongCount}</span>
+  </div>`;
+
   return `<div class="section-label">সব প্রশ্ন (${qs.length}টি) — পেজ ${page}/${totalPages}, উত্তরে ট্যাপ করো</div>
+    ${tallyHTML}
     ${toggleHTML}
     ${pagerHTML}
     ${pageQs.map((q,pidx)=>{
@@ -1063,7 +1091,15 @@ function editFormHTML(q, idx){
   const labels=['ক','খ','গ','ঘ'];
   const isCustom = q._key.startsWith('c');
   return `<div class="qcard edit-card" data-key="${q._key}">
-    <span class="qnum font-mono">প্রশ্ন ${idx+1} এডিট করছো</span>
+    <div class="edit-header">
+      <span class="qnum font-mono">প্রশ্ন ${idx+1} এডিট করছো</span>
+      <div class="edit-icon-row">
+        <button class="edit-icon-btn" data-act="cancel" data-key="${q._key}" title="বাতিল">❌</button>
+        ${q.edited? `<button class="edit-icon-btn" data-act="reset" data-key="${q._key}" title="মূল লেখায় ফিরুন">↩️</button>`:''}
+        <button class="edit-icon-btn" data-act="save" data-key="${q._key}" title="সংরক্ষণ করো">💾</button>
+        <button class="edit-icon-btn" data-act="delete" data-key="${q._key}" title="${isCustom?'মুছে ফেলো':'লুকিয়ে ফেলো'}">${isCustom?'🗑️':'🚫'}</button>
+      </div>
+    </div>
     <div class="edit-field"><label>প্রশ্ন</label><textarea rows="2" data-f="question">${esc(q.question)}</textarea></div>
     ${q.options.map((opt,oi)=>`<div class="edit-field"><label>অপশন ${labels[oi]}${oi===q.correct?' (সঠিক উত্তর)':''}</label><textarea rows="1" data-f="opt${oi}">${esc(opt)}</textarea></div>`).join('')}
     <div class="edit-field">
@@ -1073,14 +1109,6 @@ function editFormHTML(q, idx){
       </div>
     </div>
     <div class="edit-field"><label>ব্যাখ্যা</label><textarea rows="3" data-f="explanation">${esc(q.explanation||'')}</textarea></div>
-    <div class="exam-nav">
-      <button class="big-btn ghost" data-act="cancel" data-key="${q._key}">বাতিল</button>
-      ${q.edited? `<button class="big-btn ghost" data-act="reset" data-key="${q._key}" style="color:var(--rust-deep);border-color:var(--rust);">মূল লেখায় ফিরুন</button>`:''}
-      <button class="big-btn" data-act="save" data-key="${q._key}">সংরক্ষণ করো</button>
-    </div>
-    <button class="big-btn ghost" data-act="delete" data-key="${q._key}" style="margin-top:8px;color:var(--rust-deep);border-color:var(--rust);width:100%;">
-      ${isCustom? '🗑️ প্রশ্নটি মুছে ফেলো' : '🚫 এই প্রশ্নটি লুকিয়ে ফেলো'}
-    </button>
   </div>`;
 }
 function attachStudy(){
