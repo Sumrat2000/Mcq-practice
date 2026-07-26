@@ -574,6 +574,7 @@ let state = {
   navStack: [],
   searchQuery: '',
   sessionTally: {correct:0, wrong:0},
+  sessionSeen: {}, // key -> chosen option index, resets each time entering study (visual only)
 };
 
 function nav(view, extra={}){
@@ -890,6 +891,7 @@ function attachHomeBodyArea(){
       e.stopPropagation();
       state.searchQuery = '';
       state.sessionTally = {correct:0, wrong:0};
+      state.sessionSeen = {};
       nav('study', {unitId: Number(btn.dataset.uid)});
     };
   });
@@ -992,7 +994,7 @@ function unitHTML(){
   `;
 }
 function attachUnit(){
-  document.getElementById('btn-study').onclick = ()=> { state.sessionTally = {correct:0, wrong:0}; nav('study',{unitId:state.unitId, studyPage:1}); };
+  document.getElementById('btn-study').onclick = ()=> { state.sessionTally = {correct:0, wrong:0}; state.sessionSeen = {}; nav('study',{unitId:state.unitId, studyPage:1}); };
   document.getElementById('btn-exam').onclick = ()=> nav('examConfig',{unitId:state.unitId});
   document.getElementById('btn-custom').onclick = ()=> nav('custom',{unitId:state.unitId});
   const r = document.getElementById('btn-reset-progress');
@@ -1024,7 +1026,7 @@ function studyHTML(){
     const pendingKey = state.pendingAnswerKey[u.id];
     const unanswered = [], answered = [];
     qs.forEach(q=>{
-      const isAnswered = prog.seen && prog.seen[q._key]!==undefined;
+      const isAnswered = state.sessionSeen && state.sessionSeen[q._key]!==undefined;
       if(!isAnswered || q._key===pendingKey) unanswered.push(q);
       else answered.push(q);
     });
@@ -1055,8 +1057,8 @@ function studyHTML(){
     ${pageQs.map((q,pidx)=>{
       const idx = startIdx+pidx;
       if(state.editOpen.has(q._key)) return editFormHTML(q, idx);
-      const answered = prog.seen && prog.seen[q._key]!==undefined;
-      const selected = answered? prog.seen[q._key] : null;
+      const answered = state.sessionSeen && state.sessionSeen[q._key]!==undefined;
+      const selected = answered? state.sessionSeen[q._key] : null;
       return `<div class="qcard" data-key="${q._key}">
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <span class="qnum font-mono">প্রশ্ন ${idx+1}${q.source==='custom'?' <span class="ai-badge" style="margin-right:0;margin-left:6px;">নিজের</span>':''}${q.edited?' <span class="ai-badge" style="background:#fbf0dd;color:var(--amber-deep);margin-right:0;margin-left:6px;">এডিট করা</span>':''}</span>
@@ -1139,11 +1141,13 @@ function attachStudy(){
     const key = card.dataset.key;
     card.querySelectorAll('.opt-btn').forEach(btn=>{
       btn.onclick = async ()=>{
+        if(state.sessionSeen && state.sessionSeen[key] !== undefined) return; // already answered this visit — locked
         const oi = Number(btn.dataset.oi);
         const qs = allQuestionsFor(u.id);
         const q = qs.find(x=>x._key===key);
         const prog = ensureUnitProgress(u.id);
-        prog.seen[key] = oi;
+        state.sessionSeen[key] = oi; // visual lock, resets next visit
+        prog.seen[key] = oi; // permanent record, powers পরিসংখ্যান stats
         if(oi===q.correct) prog.correct[key]=true; else delete prog.correct[key];
         if(!state.sessionTally) state.sessionTally = {correct:0, wrong:0};
         if(oi===q.correct) state.sessionTally.correct++; else state.sessionTally.wrong++;
