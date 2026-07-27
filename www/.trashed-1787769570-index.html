@@ -263,44 +263,18 @@ body{
   font-family:'Hind Siliguri';box-shadow:var(--shadow);
 }
 .exam-opt.selected{border-color:var(--forest);background:#eaf3ec;font-weight:600;}
-.exam-opt-disabled{opacity:0.45; pointer-events:none;}
 .exam-nav{display:flex;gap:10px;margin-top:16px;}
 .exam-nav button{flex:1;}
 
 .result-hero{
   background:linear-gradient(160deg,var(--forest),var(--leaf-deep));color:#f5f1e2;border-radius:20px;
-  padding:26px 20px 20px;text-align:center;box-shadow:var(--shadow);margin-bottom:18px;
+  padding:26px 20px;text-align:center;box-shadow:var(--shadow);margin-bottom:18px;
 }
 .result-hero .score{font-family:'Baloo Da 2';font-size:44px;font-weight:700;}
-.result-hero .label{font-size:13px;color:#d8ead9;margin-top:10px;}
+.result-hero .label{font-size:13px;color:#d8ead9;margin-top:2px;}
 .result-stats{display:flex;justify-content:center;gap:18px;margin-top:16px;flex-wrap:wrap;}
 .result-stats div b{display:block;font-family:'JetBrains Mono';font-size:18px;}
 .result-stats div span{font-size:11px;color:#d8ead9;}
-
-.donut-wrap{position:relative;width:130px;height:130px;margin:0 auto;}
-.donut-wrap circle{transition:stroke-dasharray .6s ease;}
-.donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.donut-score{font-size:30px;font-weight:800;line-height:1;}
-.donut-total{font-size:13px;color:#d8ead9;}
-.result-legend{display:flex;justify-content:center;gap:14px;margin-top:14px;flex-wrap:wrap;font-family:'JetBrains Mono';font-size:13px;font-weight:700;}
-.result-legend span{display:flex;align-items:center;gap:5px;}
-.result-legend .dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
-.dot-correct{background:var(--leaf);}
-.dot-wrong{background:#f0a08a;}
-.dot-skip{background:#c9c2ae;}
-.result-legend .time-chip{background:rgba(255,255,255,0.12);padding:4px 10px;border-radius:999px;font-size:12px;}
-
-.unit-bar-row{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;}
-.unit-bar-label{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
-.unit-bar-track{display:flex;height:8px;border-radius:999px;overflow:hidden;background:var(--paper-2);}
-.unit-bar-seg{height:100%;}
-.seg-correct{background:var(--leaf);}
-.seg-wrong{background:#f0a08a;}
-.seg-skip{background:#c9c2ae;}
-.unit-bar-nums{display:flex;gap:10px;margin-top:6px;font-family:'JetBrains Mono';font-size:11.5px;font-weight:700;}
-.n-correct{color:var(--leaf-deep);}
-.n-wrong{color:var(--rust-deep);}
-.n-skip{color:var(--moss);}
 
 .review-item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px;}
 .review-item .q{font-weight:600;font-size:14.5px;margin-bottom:8px;}
@@ -487,31 +461,6 @@ footer.note{text-align:center;font-size:11.5px;color:var(--moss);margin-top:30px
   cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; padding:0;
 }
 .split-icon-btn:active{transform:scale(0.9);}
-
-/* ---------- custom modal (replaces native confirm/alert popups) ---------- */
-.cm-overlay{
-  position:fixed; inset:0; background:rgba(20,30,20,0.45); z-index:200;
-  display:flex; align-items:center; justify-content:center; padding:24px;
-  opacity:0; transition:opacity .18s ease; backdrop-filter:blur(1px);
-}
-.cm-overlay.show{opacity:1;}
-.cm-box{
-  background:var(--paper); border-radius:18px; padding:22px 20px 16px;
-  max-width:360px; width:100%; box-shadow:0 12px 30px rgba(0,0,0,0.25);
-  transform:translateY(8px) scale(.98); transition:transform .18s ease;
-}
-.cm-overlay.show .cm-box{transform:translateY(0) scale(1);}
-.cm-msg{font-size:15px; color:var(--ink); line-height:1.6; margin-bottom:18px; text-align:center;}
-.cm-actions{display:flex; gap:10px;}
-.cm-actions.cm-single{justify-content:center;}
-.cm-btn{
-  flex:1; border:none; border-radius:12px; padding:12px; font-size:14.5px; font-weight:700;
-  cursor:pointer; font-family:'Hind Siliguri',sans-serif;
-}
-.cm-cancel{background:var(--paper-2); color:var(--moss);}
-.cm-ok{background:var(--forest); color:#fff;}
-.cm-ok.cm-danger{background:var(--rust);}
-.cm-actions.cm-single .cm-ok{flex:0 0 auto; padding:12px 40px;}
 </style>
 </head>
 <body>
@@ -628,42 +577,6 @@ let state = {
   sessionSeen: {}, // key -> chosen option index, resets each time entering study (visual only)
 };
 
-/* ================= CUSTOM MODAL (replaces native confirm/alert) ================= */
-function showConfirm(message, onOk, opts={}){
-  const overlay = document.createElement('div');
-  overlay.className = 'cm-overlay';
-  overlay.innerHTML = `
-    <div class="cm-box">
-      <div class="cm-msg">${esc(message)}</div>
-      <div class="cm-actions">
-        <button class="cm-btn cm-cancel">${esc(opts.cancelLabel||'বাতিল')}</button>
-        <button class="cm-btn cm-ok ${opts.danger?'cm-danger':''}">${esc(opts.okLabel||'ঠিক আছে')}</button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-  requestAnimationFrame(()=>overlay.classList.add('show'));
-  const close = ()=>{ overlay.classList.remove('show'); setTimeout(()=>overlay.remove(), 180); };
-  overlay.querySelector('.cm-cancel').onclick = close;
-  overlay.querySelector('.cm-ok').onclick = ()=>{ close(); onOk(); };
-  overlay.addEventListener('click', e=>{ if(e.target===overlay) close(); });
-}
-function showAlert(message, onClose){
-  const overlay = document.createElement('div');
-  overlay.className = 'cm-overlay';
-  overlay.innerHTML = `
-    <div class="cm-box">
-      <div class="cm-msg">${esc(message)}</div>
-      <div class="cm-actions cm-single">
-        <button class="cm-btn cm-ok">ঠিক আছে</button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-  requestAnimationFrame(()=>overlay.classList.add('show'));
-  const close = ()=>{ overlay.classList.remove('show'); setTimeout(()=>{ overlay.remove(); if(onClose) onClose(); }, 180); };
-  overlay.querySelector('.cm-ok').onclick = close;
-  overlay.addEventListener('click', e=>{ if(e.target===overlay) close(); });
-}
-
 function nav(view, extra={}){
   // remember where we came from so the in-app back button always works,
   // regardless of whether the browser/webview's History API cooperates
@@ -675,22 +588,16 @@ function nav(view, extra={}){
   window.scrollTo({top:0,behavior:'instant'});
 }
 
-function performGoBack(){
+function goBack(){
+  if(state.view==='examRun'){
+    if(!confirm('পরীক্ষা বন্ধ করবেন? অগ্রগতি সংরক্ষিত হবে না।')) return;
+    clearInterval(state.examTimer);
+  }
   const stack = state.navStack || [];
   const prev = stack.pop();
   state = {...state, view: prev? prev.view : 'home', unitId: prev? prev.unitId : null, navStack: stack};
   render();
   window.scrollTo({top:0,behavior:'instant'});
-}
-function goBack(){
-  if(state.view==='examRun'){
-    showConfirm('পরীক্ষা বন্ধ করবেন? অগ্রগতি সংরক্ষিত হবে না।', ()=>{
-      clearInterval(state.examTimer);
-      performGoBack();
-    }, {danger:true, okLabel:'বন্ধ করো'});
-    return;
-  }
-  performGoBack();
 }
 
 // Hardware/browser back gesture: best-effort secondary layer for real browser tabs.
@@ -1091,13 +998,12 @@ function attachUnit(){
   document.getElementById('btn-exam').onclick = ()=> nav('examConfig',{unitId:state.unitId});
   document.getElementById('btn-custom').onclick = ()=> nav('custom',{unitId:state.unitId});
   const r = document.getElementById('btn-reset-progress');
-  if(r) r.onclick = ()=>{
-    showConfirm('এই ইউনিটের পড়ার অগ্রগতি (উত্তরগুলো) মুছে আবার শুরু করবে? পরীক্ষার ফলাফল থাকবে।', async ()=>{
-      const prog = ensureUnitProgress(state.unitId);
-      prog.seen = {}; prog.correct = {};
-      await saveProgress();
-      render();
-    }, {danger:true, okLabel:'মুছে ফেলো'});
+  if(r) r.onclick = async ()=>{
+    if(!confirm('এই ইউনিটের পড়ার অগ্রগতি (উত্তরগুলো) মুছে আবার শুরু করবে? পরীক্ষার ফলাফল থাকবে।')) return;
+    const prog = ensureUnitProgress(state.unitId);
+    prog.seen = {}; prog.correct = {};
+    await saveProgress();
+    render();
   };
 }
 
@@ -1282,35 +1188,34 @@ function attachEditCards(uid){
       const explanation = fixBengaliSpacing(card.querySelector('[data-f="explanation"]').value.trim());
       const correctSel = card.querySelector('.correct-pill.active');
       const correct = correctSel? Number(correctSel.dataset.oi) : 0;
-      if(!question || options.some(o=>!o)){ showAlert('প্রশ্ন ও সবগুলো অপশন লিখতে হবে।'); return; }
+      if(!question || options.some(o=>!o)){ alert('প্রশ্ন ও সবগুলো অপশন লিখতে হবে।'); return; }
       edits.mcq[key] = {question, options, explanation, correct};
       state.editOpen.delete(key);
       await saveEdits();
       render();
     };
     const deleteBtn = card.querySelector('[data-act="delete"]');
-    if(deleteBtn) deleteBtn.onclick = ()=>{
+    if(deleteBtn) deleteBtn.onclick = async ()=>{
       const isCustom = key.startsWith('c');
       const confirmMsg = isCustom
         ? 'এই প্রশ্নটি স্থায়ীভাবে মুছে ফেলা হবে। আগাতে চাও?'
         : 'এই প্রশ্নটি তোমার প্র্যাকটিস ও পরীক্ষা থেকে লুকিয়ে ফেলা হবে। আগাতে চাও?';
-      showConfirm(confirmMsg, async ()=>{
-        if(isCustom){
-          const idx = Number(key.slice(1));
-          CUSTOM_Q[uid].splice(idx,1);
-          if(EDITS[uid]){
-            Object.keys(EDITS[uid].mcq||{}).forEach(k=>{ if(k.startsWith('c')) delete EDITS[uid].mcq[k]; });
-          }
-          await saveCustom();
-          await saveEdits();
-        } else {
-          if(!EXCLUDED_Q[uid]) EXCLUDED_Q[uid] = [];
-          if(!EXCLUDED_Q[uid].includes(key)) EXCLUDED_Q[uid].push(key);
-          await saveExcluded();
+      if(!confirm(confirmMsg)) return;
+      if(isCustom){
+        const idx = Number(key.slice(1));
+        CUSTOM_Q[uid].splice(idx,1);
+        if(EDITS[uid]){
+          Object.keys(EDITS[uid].mcq||{}).forEach(k=>{ if(k.startsWith('c')) delete EDITS[uid].mcq[k]; });
         }
-        state.editOpen.delete(key);
-        render();
-      }, {danger:true, okLabel:'মুছে ফেলো'});
+        await saveCustom();
+        await saveEdits();
+      } else {
+        if(!EXCLUDED_Q[uid]) EXCLUDED_Q[uid] = [];
+        if(!EXCLUDED_Q[uid].includes(key)) EXCLUDED_Q[uid].push(key);
+        await saveExcluded();
+      }
+      state.editOpen.delete(key);
+      render();
     };
   });
 }
@@ -1375,7 +1280,6 @@ function examRunHTML(){
   const q = state.examQueue[state.examIndex];
   const labels=['ক','খ','গ','ঘ'];
   const selected = state.examAnswers[state.examIndex];
-  const answered = selected !== undefined;
   return `
   <div class="exam-top">
     <div class="timer">${ICO.clock} <span id="exam-timer-txt">${fmtTime(state.examSecondsLeft)}</span></div>
@@ -1386,7 +1290,7 @@ function examRunHTML(){
     <span class="qnum font-mono">প্রশ্ন ${state.examIndex+1}</span>
     <div class="qtext">${esc(q.question)}</div>
     <div>
-    ${q.options.map((opt,oi)=>`<button class="exam-opt ${selected===oi?'selected':''} ${answered&&selected!==oi?'exam-opt-disabled':''}" data-oi="${oi}"><span class="lbl" style="margin-left:10px;">${labels[oi]}</span> ${esc(opt)}</button>`).join('')}
+    ${q.options.map((opt,oi)=>`<button class="exam-opt ${selected===oi?'selected':''}" data-oi="${oi}"><span class="lbl" style="margin-left:10px;">${labels[oi]}</span> ${esc(opt)}</button>`).join('')}
     </div>
   </div>
   <div class="exam-nav">
@@ -1400,7 +1304,6 @@ function examRunHTML(){
 function attachExamRun(){
   document.querySelectorAll('.exam-opt').forEach(btn=>{
     btn.onclick = ()=>{
-      if(state.examAnswers[state.examIndex] !== undefined) return; // already answered — locked
       state.examAnswers[state.examIndex] = Number(btn.dataset.oi);
       render();
     };
@@ -1410,7 +1313,7 @@ function attachExamRun(){
   const next = document.getElementById('btn-next');
   if(next) next.onclick = ()=>{ state.examIndex++; render(); };
   const sub = document.getElementById('btn-submit');
-  if(sub) sub.onclick = ()=>{ showConfirm('পরীক্ষা জমা দিতে চাও?', finishExam, {okLabel:'জমা দাও'}); };
+  if(sub) sub.onclick = ()=>{ if(confirm('পরীক্ষা জমা দিতে চাও?')) finishExam(); };
 }
 async function finishExam(){
   clearInterval(state.examTimer);
@@ -1423,7 +1326,7 @@ async function finishExam(){
     if(!answered) skipped++;
     else if(ok) correctCount++;
     else wrongCount++;
-    return {question:q.question, options:q.options, correct:q.correct, selected: sel===undefined?-1:sel, explanation:q.explanation, ok, answered, unitId: q.unitId||state.unitId};
+    return {question:q.question, options:q.options, correct:q.correct, selected: sel===undefined?-1:sel, explanation:q.explanation, ok, answered};
   });
   const rawScore = correctCount - wrongCount*NEG_MARK;
   const score = Math.round(rawScore*100)/100;
@@ -1452,13 +1355,7 @@ async function finishExam(){
   });
   await saveProgress();
   state.examResult = {score, total: qs.length, took, review, correctCount, wrongCount, skipped};
-  // Clear the nav stack so pressing back from the result screen goes straight
-  // home, instead of re-entering the exam that's already finished.
-  state.navStack = [];
-  state = {...state, view:'examResult', unitId: (state.examMode==='mixed'||state.examMode==='favorites')? null : state.unitId};
-  try{ history.pushState({view:'examResult', unitId: state.unitId}, '', ''); }catch(e){}
-  render();
-  window.scrollTo({top:0,behavior:'instant'});
+  nav('examResult',{unitId: (state.examMode==='mixed'||state.examMode==='favorites')? null : state.unitId});
 }
 
 /* ================= EXAM RESULT ================= */
@@ -1469,68 +1366,18 @@ function examResultHTML(){
   const r = state.examResult;
   const p = pct(Math.max(0,r.score), r.total);
   const msg = p>=80? 'চমৎকার! দারুণ প্রস্তুতি 🌿' : p>=50? 'ভালো করেছো, আরেকটু চর্চা দরকার' : 'চিন্তা নেই, আবার পড়ে চেষ্টা করো';
-
-  // donut chart: 3 segments (correct/wrong/skipped) via stroke-dasharray
-  const R = 54, C = 2*Math.PI*R;
-  const cSeg = C * (r.correctCount/r.total || 0);
-  const wSeg = C * (r.wrongCount/r.total || 0);
-  const sSeg = C * (r.skipped/r.total || 0);
-
-  // per-unit breakdown (only meaningful when more than one unit contributed)
-  const byUnit = {};
-  r.review.forEach(x=>{
-    if(!byUnit[x.unitId]) byUnit[x.unitId] = {correct:0, wrong:0, skipped:0, total:0};
-    const b = byUnit[x.unitId];
-    b.total++;
-    if(!x.answered) b.skipped++; else if(x.ok) b.correct++; else b.wrong++;
-  });
-  const unitIds = Object.keys(byUnit);
-  const perUnitHTML = unitIds.length>1 ? `
-    <div class="section-label">ইউনিট অনুযায়ী ফলাফল</div>
-    ${unitIds.map(uid=>{
-      const u = UNITS.find(x=>x.id===Number(uid));
-      const b = byUnit[uid];
-      return `<div class="unit-bar-row">
-        <div class="unit-bar-label">${ICO.book} ${u?esc(u.name):'অজানা'}</div>
-        <div class="unit-bar-track">
-          <div class="unit-bar-seg seg-correct" style="width:${pct(b.correct,b.total)}%"></div>
-          <div class="unit-bar-seg seg-wrong" style="width:${pct(b.wrong,b.total)}%"></div>
-          <div class="unit-bar-seg seg-skip" style="width:${pct(b.skipped,b.total)}%"></div>
-        </div>
-        <div class="unit-bar-nums">
-          <span class="n-correct">✓${b.correct}</span><span class="n-wrong">✗${b.wrong}</span>${b.skipped?`<span class="n-skip">—${b.skipped}</span>`:''}
-        </div>
-      </div>`;
-    }).join('')}
-  ` : '';
-
   return `
   <div class="result-hero">
-    <div class="donut-wrap">
-      <svg width="130" height="130" viewBox="0 0 130 130">
-        <circle cx="65" cy="65" r="${R}" fill="none" stroke="var(--paper-2)" stroke-width="14"/>
-        <circle cx="65" cy="65" r="${R}" fill="none" stroke="var(--forest)" stroke-width="14"
-          stroke-dasharray="${cSeg} ${C-cSeg}" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 65 65)"/>
-        <circle cx="65" cy="65" r="${R}" fill="none" stroke="var(--rust)" stroke-width="14"
-          stroke-dasharray="${wSeg} ${C-wSeg}" stroke-dashoffset="-${cSeg}" stroke-linecap="round" transform="rotate(-90 65 65)"/>
-        <circle cx="65" cy="65" r="${R}" fill="none" stroke="#c9c2ae" stroke-width="14"
-          stroke-dasharray="${sSeg} ${C-sSeg}" stroke-dashoffset="-${cSeg+wSeg}" stroke-linecap="round" transform="rotate(-90 65 65)"/>
-      </svg>
-      <div class="donut-center">
-        <div class="donut-score font-display">${fmtScore(r.score)}</div>
-        <div class="donut-total">/${r.total}</div>
-      </div>
-    </div>
+    <div class="score font-display">${fmtScore(r.score)}/${r.total}</div>
     <div class="label">${msg}</div>
-    <div class="result-legend">
-      <span><i class="dot dot-correct"></i>✓ ${r.correctCount}</span>
-      <span><i class="dot dot-wrong"></i>✗ ${r.wrongCount}</span>
-      <span><i class="dot dot-skip"></i>— ${r.skipped}</span>
-      <span class="time-chip">${ICO.clock} ${fmtTime(r.took)}</span>
+    <div class="result-stats">
+      <div><b>${r.correctCount}</b><span>সঠিক</span></div>
+      <div><b>${r.wrongCount}</b><span>ভুল (−${fmtScore(r.wrongCount*NEG_MARK)})</span></div>
+      <div><b>${r.skipped}</b><span>বাদ দেওয়া</span></div>
+      <div><b>${fmtTime(r.took)}</b><span>সময়</span></div>
     </div>
   </div>
-  ${perUnitHTML}
-  <button class="big-btn" id="btn-retry" style="margin:16px 0 18px;">আরেকটি পরীক্ষা দাও</button>
+  <button class="big-btn" id="btn-retry" style="margin-bottom:18px;">আরেকটি পরীক্ষা দাও</button>
   <div class="section-label">ভুল উত্তরগুলো রিভিউ করো</div>
   ${r.review.filter(x=>!x.ok).length===0? `<div class="empty"><div class="big">🎉</div>সব ঠিক করেছো!</div>` :
   r.review.filter(x=>!x.ok).map(x=>{
@@ -1723,9 +1570,9 @@ function attachCustom(){
   const parseBtn = document.getElementById('btn-parse-paste');
   if(parseBtn) parseBtn.onclick = ()=>{
     const raw = document.getElementById('cf-question').value;
-    if(!raw.trim()){ showAlert('আগে প্রশ্ন বক্সে লেখাটা পেস্ট করো।'); return; }
+    if(!raw.trim()){ alert('আগে প্রশ্ন বক্সে লেখাটা পেস্ট করো।'); return; }
     const parsed = parsePastedMCQ(raw);
-    if(!parsed.question){ showAlert('প্রশ্নের লেখাটা বুঝতে পারলাম না, একটু ঠিক করে চেষ্টা করো।'); return; }
+    if(!parsed.question){ alert('প্রশ্নের লেখাটা বুঝতে পারলাম না, একটু ঠিক করে চেষ্টা করো।'); return; }
     document.getElementById('cf-question').value = parsed.question;
     [0,1,2,3].forEach(i=>{
       document.getElementById('cf-opt'+i).value = parsed.options[i] || '';
@@ -1737,9 +1584,9 @@ function attachCustom(){
     }
     autosizeTextareas();
     if(parsed.options.length < 4){
-      showAlert('প্রশ্ন বসানো হয়েছে, কিন্তু ৪টার কম অপশন পাওয়া গেছে — বাকিগুলো নিজে লিখে দাও।');
+      alert('প্রশ্ন বসানো হয়েছে, কিন্তু ৪টার কম অপশন পাওয়া গেছে — বাকিগুলো নিজে লিখে দাও।');
     } else if(parsed.correct === null){
-      showAlert('প্রশ্ন ও অপশন বসানো হয়েছে। এখন সঠিক উত্তরটা বেছে দাও।');
+      alert('প্রশ্ন ও অপশন বসানো হয়েছে। এখন সঠিক উত্তরটা বেছে দাও।');
     }
   };
   document.getElementById('btn-add-custom').onclick = async ()=>{
@@ -1748,7 +1595,7 @@ function attachCustom(){
     const explanation = fixBengaliSpacing(document.getElementById('cf-explanation').value.trim());
     const correctPill = document.querySelector('#cf-correct-pills .pill.active');
     const correct = correctPill? Number(correctPill.dataset.oi) : 0;
-    if(!question || options.some(o=>!o)){ showAlert('প্রশ্ন ও চারটি অপশনই লিখতে হবে।'); return; }
+    if(!question || options.some(o=>!o)){ alert('প্রশ্ন ও চারটি অপশনই লিখতে হবে।'); return; }
     CUSTOM_Q[u.id] = (CUSTOM_Q[u.id]||[]);
     CUSTOM_Q[u.id].push({question, options, correct, explanation});
     await saveCustom();
@@ -1759,17 +1606,16 @@ function attachCustom(){
     btn.onclick = ()=>{ state.editOpen.add(btn.dataset.key); render(); };
   });
   document.querySelectorAll('.del-custom-btn').forEach(btn=>{
-    btn.onclick = ()=>{
-      showConfirm('এই প্রশ্নটি মুছে ফেলবে?', async ()=>{
-        const idx = Number(btn.dataset.idx);
-        CUSTOM_Q[u.id].splice(idx,1);
-        if(EDITS[u.id]){
-          Object.keys(EDITS[u.id].mcq||{}).forEach(k=>{ if(k.startsWith('c')) delete EDITS[u.id].mcq[k]; });
-        }
-        await saveCustom();
-        await saveEdits();
-        render();
-      }, {danger:true, okLabel:'মুছে ফেলো'});
+    btn.onclick = async ()=>{
+      if(!confirm('এই প্রশ্নটি মুছে ফেলবে?')) return;
+      const idx = Number(btn.dataset.idx);
+      CUSTOM_Q[u.id].splice(idx,1);
+      if(EDITS[u.id]){
+        Object.keys(EDITS[u.id].mcq||{}).forEach(k=>{ if(k.startsWith('c')) delete EDITS[u.id].mcq[k]; });
+      }
+      await saveCustom();
+      await saveEdits();
+      render();
     };
   });
 }
