@@ -88,12 +88,14 @@ body{
   font-size:20px;font-weight:700;color:var(--forest);margin:0;line-height:1.2;
 }
 .topbar .sub{font-size:12.5px;color:var(--moss);margin-top:1px;}
+.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;}
 .dark-toggle-btn{
-  margin-left:auto; border:none; background:var(--card); width:38px; height:38px;
+  border:none; background:var(--card); width:38px; height:38px;
   border-radius:12px; cursor:pointer; box-shadow:var(--shadow); font-size:17px;
   display:flex; align-items:center; justify-content:center; flex-shrink:0;
 }
 .dark-toggle-btn:active{transform:scale(0.9);}
+.topbar-settings{position:relative;flex-shrink:0;}
 .topbar .back-btn{
   margin-left:8px;
   border:none;background:var(--card);color:var(--forest);
@@ -257,7 +259,7 @@ body{
 .edit-field textarea:focus{outline:none;border-color:var(--amber);}
 .pill.correct-pill{padding:8px 14px;}
 .study-tally{
-  position:fixed; right:14px; bottom:90px; z-index:50;
+  position:fixed; right:14px; bottom:calc(18px + env(safe-area-inset-bottom)); z-index:50;
   display:flex; flex-direction:column; gap:8px; margin:0;
 }
 .study-tally span{
@@ -387,22 +389,7 @@ body{
 
 footer.note{text-align:center;font-size:11.5px;color:var(--moss);margin-top:30px;line-height:1.6;}
 
-.bottom-nav{
-  position:fixed;left:0;right:0;bottom:0;z-index:20;
-  display:flex;justify-content:center;gap:10px;
-  padding:10px 16px calc(10px + env(safe-area-inset-bottom));
-  background:rgba(246,242,231,0.92);backdrop-filter:blur(8px);
-  border-top:1px solid var(--line);
-}
-.bn-btn{
-  display:flex;flex-direction:column;align-items:center;gap:2px;
-  background:var(--card);border:1px solid var(--line);border-radius:14px;
-  padding:8px 22px;cursor:pointer;color:var(--forest);box-shadow:var(--shadow);
-  font-family:'Hind Siliguri';
-}
-.bn-btn span{font-size:11px;font-weight:600;}
-.bn-btn:active{transform:scale(0.95);}
-#app{padding-bottom:90px;}
+#app{padding-bottom:24px;}
 .reset-link{
   margin-top:10px;background:none;border:none;color:var(--rust-deep);font-size:12px;
   font-family:'Hind Siliguri';font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;padding:0;
@@ -449,14 +436,13 @@ footer.note{text-align:center;font-size:11.5px;color:var(--moss);margin-top:30px
 .unit-toggle .ut-name{flex:1;font-size:13px;color:var(--ink);}
 .unit-toggle .ut-count{font-size:11.5px;color:var(--moss);}
 
-/* ---------- study section kebab menu ---------- */
-.study-section-label{position:relative;}
+/* ---------- topbar settings kebab menu ---------- */
 .kebab-btn{
-  flex:none;width:30px;height:30px;border:none;background:transparent;
-  color:var(--moss);cursor:pointer;border-radius:9px;
+  flex:none;width:38px;height:38px;border:none;background:var(--card);
+  color:var(--forest);cursor:pointer;border-radius:12px;box-shadow:var(--shadow);
   display:flex;align-items:center;justify-content:center;
 }
-.kebab-btn:active{background:var(--paper-2);}
+.kebab-btn:active{transform:scale(0.9);}
 .study-settings-panel{
   position:absolute;top:calc(100% + 6px);right:0;z-index:30;
   width:280px;max-width:80vw;
@@ -824,6 +810,21 @@ if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App
   });
 }
 
+// Best-effort: if @capacitor/status-bar is installed, keep the native status bar
+// background in sync with the app's theme so no black strip shows at the top.
+// This is a no-op if the plugin isn't installed — real fix also needs the plugin
+// added in capacitor.config (see build notes).
+function syncNativeStatusBar(){
+  const sb = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar;
+  if(!sb) return;
+  try{
+    sb.setOverlaysWebView({ overlay: false });
+    sb.setBackgroundColor({ color: SETTINGS.darkMode ? '#0d1712' : '#f6f2e7' });
+    sb.setStyle({ style: SETTINGS.darkMode ? 'DARK' : 'LIGHT' });
+  }catch(err){}
+}
+syncNativeStatusBar();
+
 /* ================= Icons ================= */
 const ICO = {
   leaf: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 20A7 7 0 0 1 4 13H4a7 7 0 0 1 7-7h1a7 7 0 0 1 7 7v0a7 7 0 0 1-7 7Z"/><path d="M11 20V9"/></svg>`,
@@ -846,6 +847,16 @@ const ICO = {
 };
 
 /* ================= Helpers ================= */
+function studySettingsToggleHTML(){
+  return `<div class="settings-toggle">
+    <div class="st-text"><b>উত্তর দেওয়া প্রশ্ন লিস্টের শেষে যাবে</b><span>একটি প্রশ্নের ব্যাখ্যা পড়ার সময় দিয়ে, পরের প্রশ্নের উত্তর দিলে তবেই আগেরটি শেষে চলে যাবে</span></div>
+    <button class="switch ${SETTINGS.moveAnsweredToEnd?'on':''}" id="toggle-move-end"><span class="knob"></span></button>
+  </div>
+  <div class="settings-toggle">
+    <div class="st-text"><b>সোয়াইপ করে পেজ বদলাও</b><span>ডান থেকে বামে সোয়াইপ করলে পরের পেজ, বাম থেকে ডানে করলে আগের পেজ</span></div>
+    <button class="switch ${SETTINGS.swipeEnabled?'on':''}" id="toggle-swipe"><span class="knob"></span></button>
+  </div>`;
+}
 function pagerNumsHTML(page, totalPages){
   let nums;
   if(totalPages<=7){
@@ -906,7 +917,6 @@ function render(){
 }
 
 function topbarHTML(){
-  const showBack = state.view!=='home';
   let title='শিক্ষক নিবন্ধন জীববিজ্ঞান', sub='স্টাডি ও প্র্যাকটিস অ্যাপ · by Shahriar Sumrat';
   if(state.unitId){
     const u = UNITS.find(x=>x.id===state.unitId);
@@ -928,17 +938,18 @@ function topbarHTML(){
       <h1 class="font-display">${title}</h1>
       <div class="sub">${sub}</div>
     </div>
-    <button class="dark-toggle-btn" id="btn-dark-toggle" title="নাইট মোড">${SETTINGS.darkMode?'☀️':'🌙'}</button>
-    ${showBack? `<button class="back-btn" id="btn-back">${ICO.back} ফিরুন</button>`:''}
+    <div class="topbar-actions">
+      ${state.view==='study'? `<div class="topbar-settings">
+        <button class="kebab-btn" id="study-settings-btn" title="সেটিংস">${ICO.kebab}</button>
+        <div class="study-settings-panel" id="study-settings-panel" ${state.studySettingsOpen?'':'hidden'}>${studySettingsToggleHTML()}</div>
+      </div>` : ''}
+      <button class="dark-toggle-btn" id="btn-dark-toggle" title="নাইট মোড">${SETTINGS.darkMode?'☀️':'🌙'}</button>
+    </div>
   </div>`;
 }
 
 function bottomNavHTML(){
-  if(state.view==='home') return '';
-  return `<div class="bottom-nav">
-    <button id="bn-home" class="bn-btn">${ICO.home}<span>হোম</span></button>
-    ${state.unitId? `<button id="bn-unit" class="bn-btn">${ICO.back.replace('16','20')}<span>ইউনিট</span></button>`:''}
-  </div>`;
+  return '';
 }
 
 function attachHandlers(){
@@ -949,13 +960,10 @@ function attachHandlers(){
     SETTINGS.darkMode = !SETTINGS.darkMode;
     document.body.classList.toggle('dark-mode', SETTINGS.darkMode);
     syncThemeColor();
+    syncNativeStatusBar();
     await saveSettings();
     render();
   };
-  const bnHome = document.getElementById('bn-home');
-  if(bnHome) bnHome.onclick = goHome;
-  const bnUnit = document.getElementById('bn-unit');
-  if(bnUnit) bnUnit.onclick = ()=> nav('unit',{unitId:state.unitId});
 
   if(state.view==='home') attachHome();
   if(state.view==='units') attachUnits();
@@ -1268,20 +1276,7 @@ function studyHTML(){
     <button class="pager-nav" id="pg-next" ${page===totalPages?'disabled':''}>পরের ${ICO.fwd}</button>
   </div>` : '';
 
-  const toggleHTML = `<div class="settings-toggle">
-    <div class="st-text"><b>উত্তর দেওয়া প্রশ্ন লিস্টের শেষে যাবে</b><span>একটি প্রশ্নের ব্যাখ্যা পড়ার সময় দিয়ে, পরের প্রশ্নের উত্তর দিলে তবেই আগেরটি শেষে চলে যাবে</span></div>
-    <button class="switch ${SETTINGS.moveAnsweredToEnd?'on':''}" id="toggle-move-end"><span class="knob"></span></button>
-  </div>
-  <div class="settings-toggle">
-    <div class="st-text"><b>সোয়াইপ করে পেজ বদলাও</b><span>ডান থেকে বামে সোয়াইপ করলে পরের পেজ, বাম থেকে ডানে করলে আগের পেজ</span></div>
-    <button class="switch ${SETTINGS.swipeEnabled?'on':''}" id="toggle-swipe"><span class="knob"></span></button>
-  </div>`;
-
-  return `<div class="section-label study-section-label">
-    <span>সব প্রশ্ন (${qs.length}টি) — পেজ ${page}/${totalPages}, উত্তরে ট্যাপ করো</span>
-    <button class="kebab-btn" id="study-settings-btn" title="সেটিংস">${ICO.kebab}</button>
-    <div class="study-settings-panel" id="study-settings-panel" ${state.studySettingsOpen?'':'hidden'}>${toggleHTML}</div>
-  </div>
+  return `<div class="section-label">সব প্রশ্ন (${qs.length}টি) — পেজ ${page}/${totalPages}, উত্তরে ট্যাপ করো</div>
     ${pagerHTML}
     ${pageQs.map((q,pidx)=>{
       const idx = startIdx+pidx;
