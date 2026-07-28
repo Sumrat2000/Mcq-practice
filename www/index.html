@@ -25,6 +25,32 @@
   --line:#dcd3ba;
   --shadow: 0 1px 2px rgba(28,43,34,.06), 0 8px 24px rgba(28,43,34,.06);
 }
+body.dark-mode{
+  --ink:#e9f1ea;
+  --forest:#4ea179;
+  --forest-light:#5cb98c;
+  --moss:#93b3a0;
+  --paper:#132119;
+  --paper-2:#1c2e24;
+  --card:#182a20;
+  --amber:#d9a45c;
+  --amber-deep:#e8b876;
+  --leaf:#5cb98c;
+  --leaf-deep:#7fd1a8;
+  --rust:#e07a5f;
+  --rust-deep:#f0987d;
+  --line:#2c4235;
+  --shadow: 0 1px 2px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.4);
+  background:#0d1712;
+}
+body.dark-mode{
+  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.045) 1px, transparent 0);
+}
+body.dark-mode .explain{background:#26321f;color:#e7dcc0;}
+body.dark-mode .neg-mark-note{background:#2a2617;color:#e7dcc0;}
+body.dark-mode .cm-box{background:var(--card);}
+body.dark-mode .dot-skip,
+body.dark-mode .seg-skip{background:#5a6b60;}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
@@ -59,8 +85,14 @@ body{
   font-size:20px;font-weight:700;color:var(--forest);margin:0;line-height:1.2;
 }
 .topbar .sub{font-size:12.5px;color:var(--moss);margin-top:1px;}
+.dark-toggle-btn{
+  margin-left:auto; border:none; background:var(--card); width:38px; height:38px;
+  border-radius:12px; cursor:pointer; box-shadow:var(--shadow); font-size:17px;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.dark-toggle-btn:active{transform:scale(0.9);}
 .topbar .back-btn{
-  margin-left:auto;
+  margin-left:8px;
   border:none;background:var(--card);color:var(--forest);
   font-family:'Hind Siliguri',sans-serif;font-weight:600;font-size:14px;
   padding:9px 14px;border-radius:10px;cursor:pointer;
@@ -204,13 +236,14 @@ body{
 .edit-btn:active{transform:scale(0.93);}
 .edit-card{border-color:var(--amber);}
 .edit-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
-.edit-icon-row{display:flex;gap:4px;}
+.edit-icon-row{display:flex;gap:10px;}
 .edit-icon-btn{
   border:1px solid var(--line);background:var(--paper);
-  width:28px;height:28px;border-radius:8px;cursor:pointer;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;font-size:14px;padding:0;
+  width:36px;height:36px;border-radius:10px;cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:16px;padding:0;
 }
 .edit-icon-btn:active{transform:scale(0.9);}
+.edit-icon-btn[data-act="delete"]{margin-left:8px;border-color:var(--rust);}
 .edit-field{margin-bottom:8px;}
 .edit-field label{display:block;font-size:11px;font-weight:700;color:var(--amber-deep);margin-bottom:3px;font-family:'JetBrains Mono';}
 .edit-field textarea{
@@ -237,6 +270,27 @@ body{
 /* ---------- exam ---------- */
 .exam-config{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow);}
 .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 20px;}
+.count-slider-wrap{margin:6px 0 20px;}
+.count-slider-wrap input[type=range]{
+  width:100%; height:6px; border-radius:999px; background:var(--paper-2);
+  -webkit-appearance:none; appearance:none; outline:none; margin:8px 0 10px;
+}
+.count-slider-wrap input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none; width:26px; height:26px; border-radius:50%;
+  background:var(--forest); border:3px solid var(--paper); box-shadow:0 2px 6px rgba(0,0,0,0.25); cursor:pointer;
+}
+.count-slider-wrap input[type=range]::-moz-range-thumb{
+  width:26px; height:26px; border-radius:50%; background:var(--forest);
+  border:3px solid var(--paper); box-shadow:0 2px 6px rgba(0,0,0,0.25); cursor:pointer;
+}
+.count-slider-val{
+  text-align:center; font-size:16px; font-weight:800; color:var(--forest);
+  background:var(--paper-2); border-radius:10px; padding:8px; margin-bottom:8px;
+}
+.count-fixed{
+  text-align:center; font-size:13.5px; color:var(--moss); background:var(--paper-2);
+  border-radius:10px; padding:12px; margin:6px 0 20px;
+}
 .pill{
   padding:9px 16px;border-radius:20px;border:1.5px solid var(--line);background:var(--paper);
   font-size:13.5px;font-weight:600;cursor:pointer;color:var(--ink);font-family:'Hind Siliguri';
@@ -527,7 +581,7 @@ let EDITS = {}; // unitId -> { mcq: {key: {question,options,explanation,correct}
 let MIXED_EXAMS = []; // array of {date, unitIds:[], score, total, took}
 let storageReady = false;
 const LS_KEYS = {progress:'bioapp_progress', custom:'bioapp_custom', edits:'bioapp_edits', mixed:'bioapp_mixed_exams', settings:'bioapp_settings', favorites:'bioapp_favorites', excluded:'bioapp_excluded'};
-let SETTINGS = {moveAnsweredToEnd: false};
+let SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false};
 let FAVORITES = new Set(); // set of "uid:key" strings
 
 function lsGetArr(key){
@@ -557,7 +611,8 @@ async function loadStorage(){
   EXCLUDED_Q = lsGet(LS_KEYS.excluded);
   MIXED_EXAMS = lsGetArr(LS_KEYS.mixed);
   const s = lsGet(LS_KEYS.settings);
-  SETTINGS = {moveAnsweredToEnd: false, ...s};
+  SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false, ...s};
+  document.body.classList.toggle('dark-mode', !!SETTINGS.darkMode);
   FAVORITES = new Set(lsGetArr(LS_KEYS.favorites));
   storageReady = true;
 }
@@ -614,6 +669,24 @@ function allQuestionsFor(uid){
 /* ================= State ================= */
 const NEG_MARK = 0.25;
 const STUDY_PAGE_SIZE = 15;
+
+function attachSwipeNav(el, onSwipeLeft, onSwipeRight){
+  if(!el) return;
+  let startX=null, startY=null;
+  el.addEventListener('touchstart', e=>{
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  }, {passive:true});
+  el.addEventListener('touchend', e=>{
+    if(startX===null) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    startX = null;
+    if(Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy)*1.5){
+      if(dx < 0) onSwipeLeft(); else onSwipeRight();
+    }
+  }, {passive:true});
+}
 let state = {
   view:'home', unitId:null,
   examQueue:[], examAnswers:{}, examIndex:0, examSecondsLeft:0, examTimer:null, examTotalSeconds:0,
@@ -809,6 +882,7 @@ function topbarHTML(){
       <h1 class="font-display">${title}</h1>
       <div class="sub">${sub}</div>
     </div>
+    <button class="dark-toggle-btn" id="btn-dark-toggle" title="নাইট মোড">${SETTINGS.darkMode?'☀️':'🌙'}</button>
     ${showBack? `<button class="back-btn" id="btn-back">${ICO.back} ফিরুন</button>`:''}
   </div>`;
 }
@@ -824,6 +898,13 @@ function bottomNavHTML(){
 function attachHandlers(){
   const back = document.getElementById('btn-back');
   if(back) back.onclick = goBack;
+  const darkToggle = document.getElementById('btn-dark-toggle');
+  if(darkToggle) darkToggle.onclick = async ()=>{
+    SETTINGS.darkMode = !SETTINGS.darkMode;
+    document.body.classList.toggle('dark-mode', SETTINGS.darkMode);
+    await saveSettings();
+    render();
+  };
   const bnHome = document.getElementById('bn-home');
   if(bnHome) bnHome.onclick = goHome;
   const bnUnit = document.getElementById('bn-unit');
@@ -1143,6 +1224,10 @@ function studyHTML(){
   const toggleHTML = `<div class="settings-toggle">
     <div class="st-text"><b>উত্তর দেওয়া প্রশ্ন লিস্টের শেষে যাবে</b><span>একটি প্রশ্নের ব্যাখ্যা পড়ার সময় দিয়ে, পরের প্রশ্নের উত্তর দিলে তবেই আগেরটি শেষে চলে যাবে</span></div>
     <button class="switch ${SETTINGS.moveAnsweredToEnd?'on':''}" id="toggle-move-end"><span class="knob"></span></button>
+  </div>
+  <div class="settings-toggle">
+    <div class="st-text"><b>সোয়াইপ করে পেজ বদলাও</b><span>ডান থেকে বামে সোয়াইপ করলে পরের পেজ, বাম থেকে ডানে করলে আগের পেজ</span></div>
+    <button class="switch ${SETTINGS.swipeEnabled?'on':''}" id="toggle-swipe"><span class="knob"></span></button>
   </div>`;
 
   return `<div class="section-label">সব প্রশ্ন (${qs.length}টি) — পেজ ${page}/${totalPages}, উত্তরে ট্যাপ করো</div>
@@ -1212,6 +1297,22 @@ function attachStudy(){
     await saveSettings();
     render();
   };
+  const swipeToggle = document.getElementById('toggle-swipe');
+  if(swipeToggle) swipeToggle.onclick = async ()=>{
+    SETTINGS.swipeEnabled = !SETTINGS.swipeEnabled;
+    await saveSettings();
+    render();
+  };
+  if(SETTINGS.swipeEnabled){
+    const totalPages = Math.max(1, Math.ceil(allQuestionsFor(state.unitId).length / STUDY_PAGE_SIZE));
+    attachSwipeNav(document.getElementById('view-body'), ()=>{
+      // swiped right-to-left -> next page
+      if((state.studyPage||1) < totalPages){ state.studyPage=(state.studyPage||1)+1; render(); window.scrollTo({top:0,behavior:'instant'}); }
+    }, ()=>{
+      // swiped left-to-right -> previous page
+      if((state.studyPage||1) > 1){ state.studyPage=(state.studyPage||1)-1; render(); window.scrollTo({top:0,behavior:'instant'}); }
+    });
+  }
   document.querySelectorAll('.pager-num').forEach(btn=>{
     btn.onclick = ()=>{ state.studyPage = Number(btn.dataset.p); render(); window.scrollTo({top:0,behavior:'instant'}); };
   });
@@ -1316,20 +1417,28 @@ function attachEditCards(uid){
 }
 
 /* ================= EXAM CONFIG ================= */
+function countSliderHTML(id, total, chosen){
+  if(total<=5){
+    return `<div class="count-fixed font-mono">মোট ${total}টি প্রশ্ন উপলব্ধ — সবগুলোই ব্যবহার হবে</div>`;
+  }
+  const cap = Math.min(100, total);
+  const val = Math.min(chosen||5, cap);
+  return `<div class="count-slider-wrap">
+    <input type="range" id="${id}" min="5" max="${cap}" step="5" value="${val}">
+    <div class="count-slider-val font-mono" id="${id}-val">${val} টি প্রশ্ন</div>
+    ${total>cap? `<button class="pill" id="${id}-all" data-n="${total}">সব (${total}টি) নাও</button>`:''}
+  </div>`;
+}
 function examConfigHTML(){
   const u = UNITS.find(x=>x.id===state.unitId);
   const total = allQuestionsFor(u.id).length;
-  const opts = [10,20,30].filter(n=>n<total);
-  opts.push(total);
-  const chosen = state._examCount || opts[0];
+  const chosen = state._examCount || Math.min(10,total);
   return `<div class="exam-config">
     <h4 class="font-display" style="margin:0 0 4px;font-size:17px;">পরীক্ষা সেট করো</h4>
     <p style="font-size:13px;color:var(--moss);margin:0 0 10px;">মোট উপলব্ধ প্রশ্ন: ${total}টি। প্রশ্নপ্রতি ৪৫ সেকেন্ড সময় দেওয়া হবে।</p>
     <div class="neg-mark-note">⚠️ ভুল উত্তরে <b>-০.২৫</b> নম্বর কাটা যাবে। উত্তর না দিলে কোনো নম্বর কাটা হবে না।</div>
     <div style="font-size:13px;font-weight:600;margin:14px 0 6px;">কতটি প্রশ্ন?</div>
-    <div class="pill-row" id="count-pills">
-      ${opts.map(n=>`<button class="pill ${n===chosen?'active':''}" data-n="${n}">${n===total?'সব ('+total+')':n}</button>`).join('')}
-    </div>
+    ${countSliderHTML('count-slider', total, chosen)}
     <button class="big-btn" id="btn-start-exam">পরীক্ষা শুরু করো</button>
   </div>`;
 }
@@ -1337,9 +1446,13 @@ function attachExamConfig(){
   const u = UNITS.find(x=>x.id===state.unitId);
   const total = allQuestionsFor(u.id).length;
   if(!state._examCount) state._examCount = Math.min(10,total);
-  document.querySelectorAll('#count-pills .pill').forEach(p=>{
-    p.onclick = ()=>{ state._examCount = Number(p.dataset.n); render(); };
-  });
+  const slider = document.getElementById('count-slider');
+  if(slider) slider.oninput = ()=>{
+    state._examCount = Number(slider.value);
+    document.getElementById('count-slider-val').textContent = state._examCount+' টি প্রশ্ন';
+  };
+  const allBtn = document.getElementById('count-slider-all');
+  if(allBtn) allBtn.onclick = ()=>{ state._examCount = Number(allBtn.dataset.n); render(); };
   document.getElementById('btn-start-exam').onclick = ()=>{
     const qs = shuffle(allQuestionsFor(u.id)).slice(0, state._examCount);
     const total_seconds = qs.length*45;
@@ -1797,10 +1910,7 @@ function examBuilderHTML(){
     <p style="font-size:12.5px;color:var(--moss);margin:14px 0 6px;">নির্বাচিত ইউনিট থেকে মোট উপলব্ধ প্রশ্ন: <b style="color:var(--forest);">${poolSize}</b>টি</p>
     <div class="neg-mark-note">⚠️ ভুল উত্তরে <b>-০.২৫</b> নম্বর কাটা যাবে। উত্তর না দিলে কোনো নম্বর কাটা হবে না।</div>
     <div style="font-size:13px;font-weight:600;margin:14px 0 6px;">কতটি প্রশ্ন?</div>
-    <div class="pill-row" id="builder-count-pills">
-      ${countOpts.map(n=>`<button class="pill ${n===chosen?'active':''}" data-n="${n}">${n===poolSize?'সব ('+poolSize+')':n}</button>`).join('')}
-      ${!countOpts.length? '<span style="font-size:12.5px;color:var(--rust-deep);">অন্তত একটি ইউনিট বেছে নাও যাতে প্রশ্ন থাকে</span>':''}
-    </div>
+    ${poolSize>0? countSliderHTML('builder-count-slider', poolSize, chosen) : ''}
     <button class="big-btn" id="btn-start-builder-exam" ${!poolSize?'disabled style="opacity:.5;"':''}>পরীক্ষা শুরু করো</button>
   </div>`;
 }
@@ -1814,9 +1924,13 @@ function attachExamBuilder(){
       render();
     };
   });
-  document.querySelectorAll('#builder-count-pills .pill').forEach(p=>{
-    p.onclick = ()=>{ state._builderCount = Number(p.dataset.n); render(); };
-  });
+  const slider = document.getElementById('builder-count-slider');
+  if(slider) slider.oninput = ()=>{
+    state._builderCount = Number(slider.value);
+    document.getElementById('builder-count-slider-val').textContent = state._builderCount+' টি প্রশ্ন';
+  };
+  const allBtn = document.getElementById('builder-count-slider-all');
+  if(allBtn) allBtn.onclick = ()=>{ state._builderCount = Number(allBtn.dataset.n); render(); };
   const startBtn = document.getElementById('btn-start-builder-exam');
   if(startBtn) startBtn.onclick = ()=>{
     const unitIds = UNITS.filter(u=>state.builderUnits.has(u.id)).map(u=>u.id);
@@ -1910,26 +2024,26 @@ function attachFavorites(){
 function favExamConfigHTML(){
   const favs = favoriteQuestions();
   const total = favs.length;
-  const opts = [10,20,30].filter(n=>n<total);
-  opts.push(total);
-  const chosen = state._favExamCount || opts[0] || 0;
+  const chosen = state._favExamCount || Math.min(10, total);
   return `<div class="exam-config">
     <h4 class="font-display" style="margin:0 0 4px;font-size:17px;">ফেভারিট পরীক্ষা সেট করো</h4>
     <p style="font-size:13px;color:var(--moss);margin:0 0 10px;">মোট ফেভারিট প্রশ্ন: ${total}টি। প্রশ্নপ্রতি ৪৫ সেকেন্ড সময় দেওয়া হবে।</p>
     <div class="neg-mark-note">⚠️ ভুল উত্তরে <b>-০.২৫</b> নম্বর কাটা যাবে। উত্তর না দিলে কোনো নম্বর কাটা হবে না।</div>
     <div style="font-size:13px;font-weight:600;margin:14px 0 6px;">কতটি প্রশ্ন?</div>
-    <div class="pill-row" id="fav-count-pills">
-      ${opts.map(n=>`<button class="pill ${n===chosen?'active':''}" data-n="${n}">${n===total?'সব ('+total+')':n}</button>`).join('')}
-    </div>
+    ${total>0? countSliderHTML('fav-count-slider', total, chosen) : '<div class="count-fixed font-mono">কোনো ফেভারিট প্রশ্ন নেই</div>'}
     <button class="big-btn" id="btn-start-fav-exam" ${!total?'disabled style="opacity:.5;"':''}>পরীক্ষা শুরু করো</button>
   </div>`;
 }
 function attachFavExamConfig(){
   const favs = favoriteQuestions();
   if(!state._favExamCount) state._favExamCount = Math.min(10, favs.length);
-  document.querySelectorAll('#fav-count-pills .pill').forEach(p=>{
-    p.onclick = ()=>{ state._favExamCount = Number(p.dataset.n); render(); };
-  });
+  const slider = document.getElementById('fav-count-slider');
+  if(slider) slider.oninput = ()=>{
+    state._favExamCount = Number(slider.value);
+    document.getElementById('fav-count-slider-val').textContent = state._favExamCount+' টি প্রশ্ন';
+  };
+  const allBtn = document.getElementById('fav-count-slider-all');
+  if(allBtn) allBtn.onclick = ()=>{ state._favExamCount = Number(allBtn.dataset.n); render(); };
   const startBtn = document.getElementById('btn-start-fav-exam');
   if(startBtn) startBtn.onclick = ()=>{
     const count = state._favExamCount || Math.min(10, favs.length);
