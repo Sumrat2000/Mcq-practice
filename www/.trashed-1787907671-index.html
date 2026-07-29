@@ -370,8 +370,6 @@ body{
 
 /* ---------- stats ---------- */
 .stat-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow);}
-.progress-chart-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px 10px;margin-bottom:16px;box-shadow:var(--shadow);}
-.progress-chart-labels{display:flex;justify-content:space-between;font-size:11.5px;color:var(--moss);font-family:'JetBrains Mono';margin-top:4px;}
 .stat-card h4{font-family:'Baloo Da 2';font-size:14.5px;margin:0 0 8px;}
 .bar-track{height:9px;background:var(--paper-2);border-radius:6px;overflow:hidden;}
 .bar-fill{height:100%;background:linear-gradient(90deg,var(--amber),var(--leaf));}
@@ -567,12 +565,6 @@ footer.note{text-align:center;font-size:11.5px;color:var(--moss);margin-top:30px
   transform:translateY(8px) scale(.98); transition:transform .18s ease;
 }
 .cm-overlay.show .cm-box{transform:translateY(0) scale(1);}
-.cm-box-wide{max-width:420px;}
-.export-textarea{
-  width:100%; height:280px; border:1px solid var(--line); border-radius:10px;
-  padding:10px 12px; font-size:13px; font-family:'JetBrains Mono',monospace; color:var(--ink);
-  background:var(--paper-2); resize:vertical; line-height:1.5; white-space:pre-wrap;
-}
 .cm-msg{font-size:15px; color:var(--ink); line-height:1.6; margin-bottom:18px; text-align:center;}
 .cm-actions{display:flex; gap:10px;}
 .cm-actions.cm-single{justify-content:center;}
@@ -598,7 +590,7 @@ let PROGRESS = {}; // unitId -> {seen:{}, correct:{}, exams:[]}
 let EDITS = {}; // unitId -> { mcq: {key: {question,options,explanation,correct}} }
 let MIXED_EXAMS = []; // array of {date, unitIds:[], score, total, took}
 let storageReady = false;
-const LS_KEYS = {progress:'bioapp_progress', custom:'bioapp_custom', edits:'bioapp_edits', mixed:'bioapp_mixed_exams', settings:'bioapp_settings', favorites:'bioapp_favorites', excluded:'bioapp_excluded', streak:'bioapp_streak'};
+const LS_KEYS = {progress:'bioapp_progress', custom:'bioapp_custom', edits:'bioapp_edits', mixed:'bioapp_mixed_exams', settings:'bioapp_settings', favorites:'bioapp_favorites', excluded:'bioapp_excluded'};
 let SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false};
 let FAVORITES = new Set(); // set of "uid:key" strings
 
@@ -621,7 +613,6 @@ function storageAvailable(){
 }
 let STORAGE_OK = true;
 
-let STREAK = {count:0, lastDate:null};
 async function loadStorage(){
   STORAGE_OK = storageAvailable();
   PROGRESS = lsGet(LS_KEYS.progress);
@@ -629,31 +620,12 @@ async function loadStorage(){
   EDITS = lsGet(LS_KEYS.edits);
   EXCLUDED_Q = lsGet(LS_KEYS.excluded);
   MIXED_EXAMS = lsGetArr(LS_KEYS.mixed);
-  STREAK = lsGet(LS_KEYS.streak);
-  if(!STREAK || typeof STREAK.count !== 'number') STREAK = {count:0, lastDate:null};
   const s = lsGet(LS_KEYS.settings);
   SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false, ...s};
   document.body.classList.toggle('dark-mode', !!SETTINGS.darkMode);
   syncThemeColor();
   FAVORITES = new Set(lsGetArr(LS_KEYS.favorites));
   storageReady = true;
-}
-function todayStr(){
-  const d = new Date();
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
-async function bumpStreak(){
-  const today = todayStr();
-  if(STREAK.lastDate === today) return; // already counted today
-  if(STREAK.lastDate){
-    const prev = new Date(STREAK.lastDate);
-    const diffDays = Math.round((new Date(today) - prev) / 86400000);
-    STREAK.count = diffDays === 1 ? STREAK.count + 1 : 1;
-  } else {
-    STREAK.count = 1;
-  }
-  STREAK.lastDate = today;
-  lsSet(LS_KEYS.streak, STREAK);
 }
 function syncThemeColor(){
   const m = document.getElementById('meta-theme-color');
@@ -682,20 +654,6 @@ function favoriteQuestions(){
     if(!u) return;
     const q = allQuestionsFor(uid).find(x=>x._key===key);
     if(q) out.push(q);
-  });
-  return out;
-}
-function mistakeQuestions(){
-  const out = [];
-  UNITS.forEach(u=>{
-    const prog = PROGRESS[u.id];
-    if(!prog || !prog.seen) return;
-    const qs = allQuestionsFor(u.id);
-    Object.keys(prog.seen).forEach(key=>{
-      if(prog.correct && prog.correct[key]) return; // currently correct, skip
-      const q = qs.find(x=>x._key===key);
-      if(q) out.push(q);
-    });
   });
   return out;
 }
@@ -792,59 +750,6 @@ function showAlert(message, onClose){
   const close = ()=>{ overlay.classList.remove('show'); setTimeout(()=>{ overlay.remove(); if(onClose) onClose(); }, 180); };
   overlay.querySelector('.cm-ok').onclick = close;
   overlay.addEventListener('click', e=>{ if(e.target===overlay) close(); });
-}
-function exportCustomQuestionsText(list, unitName){
-  const labels=['ক','খ','গ','ঘ'];
-  const header = `${unitName} — নিজের লেখা প্রশ্ন (${list.length}টি)\n\n`;
-  const body = list.map((q,i)=>{
-    let block = `প্রশ্ন ${i+1}:\n${q.question}\n`;
-    q.options.forEach((opt,oi)=>{ block += `${labels[oi]}. ${opt}\n`; });
-    block += `উত্তর: ${labels[q.correct]}\n`;
-    if(q.explanation) block += `ব্যাখ্যা: ${q.explanation}\n`;
-    return block;
-  }).join('\n');
-  return header + body;
-}
-function showTextModal(title, text){
-  const overlay = document.createElement('div');
-  overlay.className = 'cm-overlay';
-  overlay.innerHTML = `
-    <div class="cm-box cm-box-wide">
-      <div class="cm-msg" style="text-align:left;font-weight:700;margin-bottom:10px;">${esc(title)}</div>
-      <textarea class="export-textarea" readonly>${esc(text)}</textarea>
-      <div class="cm-actions" style="margin-top:12px;">
-        <button class="cm-btn cm-cancel" id="tm-close">বন্ধ করো</button>
-        <button class="cm-btn cm-ok" id="tm-copy">কপি করো</button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-  requestAnimationFrame(()=>overlay.classList.add('show'));
-  const close = ()=>{ overlay.classList.remove('show'); setTimeout(()=>overlay.remove(), 180); };
-  overlay.querySelector('#tm-close').onclick = close;
-  overlay.querySelector('#tm-copy').onclick = async ()=>{
-    const ta = overlay.querySelector('.export-textarea');
-    try{
-      if(navigator.clipboard && navigator.clipboard.writeText){
-        await navigator.clipboard.writeText(text);
-      } else {
-        ta.select();
-        document.execCommand('copy');
-      }
-      const btn = overlay.querySelector('#tm-copy');
-      btn.textContent = '✓ কপি হয়েছে!';
-      setTimeout(()=>{ btn.textContent = 'কপি করো'; }, 1500);
-    }catch(e){
-      showAlert('কপি করা যায়নি, টেক্সটটি ম্যানুয়ালি সিলেক্ট করে কপি করো।');
-    }
-  };
-  overlay.addEventListener('click', e=>{ if(e.target===overlay) close(); });
-  if(navigator.share){
-    const shareBtn = document.createElement('button');
-    shareBtn.className = 'cm-btn cm-cancel';
-    shareBtn.textContent = 'শেয়ার করো';
-    shareBtn.onclick = ()=> navigator.share({title, text}).catch(()=>{});
-    overlay.querySelector('.cm-actions').insertBefore(shareBtn, overlay.querySelector('#tm-copy'));
-  }
 }
 
 function nav(view, extra={}){
@@ -1022,14 +927,10 @@ function topbarHTML(){
     title = 'কাস্টম পরীক্ষা'; sub = 'একাধিক ইউনিট থেকে প্রশ্ন বেছে নাও';
   }else if(state.view==='favorites'||state.view==='favExamConfig'){
     title = 'ফেভারিট প্রশ্ন'; sub = 'তোমার পছন্দ করা প্রশ্নগুলো';
-  }else if(state.view==='mistakes'||state.view==='mistakesExamConfig'){
-    title = 'ভুল হওয়া প্রশ্ন'; sub = 'যেসব প্রশ্নে এখনো ভুল করছো';
   }else if((state.view==='examRun'||state.view==='examResult') && state.examMode==='mixed'){
     title = 'মিশ্র পরীক্ষা'; sub = state.examUnitIds.length+'টি ইউনিট থেকে প্রশ্ন';
   }else if((state.view==='examRun'||state.view==='examResult') && state.examMode==='favorites'){
     title = 'ফেভারিট পরীক্ষা'; sub = 'পছন্দ করা প্রশ্ন থেকে পরীক্ষা';
-  }else if((state.view==='examRun'||state.view==='examResult') && state.examMode==='mistakes'){
-    title = 'ভুল প্রশ্নের পরীক্ষা'; sub = 'যেসব প্রশ্নে ভুল করেছিলে তা থেকে';
   }
   return `<div class="topbar">
     <div class="leaf-badge">${ICO.leaf.replace('currentColor','#eaf3ec')}</div>
@@ -1076,8 +977,6 @@ function attachHandlers(){
   if(state.view==='examBuilder') attachExamBuilder();
   if(state.view==='favorites') attachFavorites();
   if(state.view==='favExamConfig') attachFavExamConfig();
-  if(state.view==='mistakes') attachMistakes();
-  if(state.view==='mistakesExamConfig') attachMistakesExamConfig();
 }
 
 /* ================= Router ================= */
@@ -1094,8 +993,6 @@ function viewHTML(){
   if(state.view==='examBuilder') return examBuilderHTML();
   if(state.view==='favorites') return favoritesHTML();
   if(state.view==='favExamConfig') return favExamConfigHTML();
-  if(state.view==='mistakes') return mistakesHTML();
-  if(state.view==='mistakesExamConfig') return mistakesExamConfigHTML();
   return '';
 }
 
@@ -1107,7 +1004,7 @@ function searchAllQuestions(query){
   UNITS.forEach(u=>{
     const qs = allQuestionsFor(u.id);
     qs.forEach(item=>{
-      const hay = (item.question + ' ' + item.options.join(' ') + ' ' + (item.explanation||'')).toLowerCase();
+      const hay = (item.question + ' ' + item.options.join(' ')).toLowerCase();
       if(hay.includes(q)){
         results.push({unitId:u.id, unitName:u.name, item});
       }
@@ -1124,7 +1021,6 @@ function highlightMatch(text, query){
   return escaped.replace(re, m => `<b class="search-hl">${m}</b>`);
 }
 function homeFolderGridHTML(favCount){
-  const mistakeCount = mistakeQuestions().length;
   return `
     <div class="folder-grid">
       <button class="folder-card" id="btn-go-units">
@@ -1146,11 +1042,6 @@ function homeFolderGridHTML(favCount){
         <div class="folder-icon" style="background:linear-gradient(155deg,#c94d6d,#e0708a);">${ICO.heartFill}</div>
         <h3>ফেভারিট</h3>
         <p>${favCount? favCount+'টি পছন্দের প্রশ্ন':'পছন্দের প্রশ্ন জমাও'}</p>
-      </button>
-      <button class="folder-card" id="btn-go-mistakes">
-        <div class="folder-icon" style="background:linear-gradient(155deg,#8a4a9c,#b06fc4);">${ICO.refresh}</div>
-        <h3>ভুল হওয়া প্রশ্ন</h3>
-        <p>${mistakeCount? mistakeCount+'টি প্রশ্ন আবার অনুশীলন করো':'এখনো কোনো ভুল নেই 🎉'}</p>
       </button>
     </div>`;
 }
@@ -1194,7 +1085,6 @@ function homeHTML(){
       <div class="stat"><b>${totalQ}</b><span>মোট প্রশ্ন</span></div>
       <div class="stat"><b>${totalExams}</b><span>দেওয়া পরীক্ষা</span></div>
       <div class="stat"><b>${avgScore!==null? avgScore+'%':'—'}</b><span>গড় স্কোর</span></div>
-      ${STREAK.count>0? `<div class="stat streak-stat"><b>🔥 ${STREAK.count}</b><span>দিন ধারাবাহিক</span></div>`:''}
     </div>
   </div>
 
@@ -1217,8 +1107,6 @@ function attachHomeBodyArea(){
   if(btnStats) btnStats.onclick = ()=> nav('stats');
   const btnFav = document.getElementById('btn-go-favorites');
   if(btnFav) btnFav.onclick = ()=> nav('favorites');
-  const btnMistakes = document.getElementById('btn-go-mistakes');
-  if(btnMistakes) btnMistakes.onclick = ()=> nav('mistakes');
 
   document.querySelectorAll('.search-result-card').forEach(card=>{
     card.addEventListener('click', (e)=>{
@@ -1522,7 +1410,6 @@ function attachStudy(){
         if(oi===q.correct) state.sessionTally.correct++; else state.sessionTally.wrong++;
         state.pendingAnswerKey[u.id] = key;
         await saveProgress();
-        await bumpStreak();
         const scrollY = window.scrollY;
         render();
         window.scrollTo({top:scrollY, behavior:'instant'});
@@ -1702,7 +1589,6 @@ function attachExamRun(){
 }
 async function finishExam(){
   clearInterval(state.examTimer);
-  await bumpStreak();
   const qs = state.examQueue;
   let correctCount=0, wrongCount=0, skipped=0;
   const review = qs.map((q,i)=>{
@@ -1724,9 +1610,6 @@ async function finishExam(){
   }else if(state.examMode==='favorites'){
     MIXED_EXAMS.push({date:new Date().toISOString(), unitIds: [], score, total:qs.length, took, correctCount, wrongCount, skipped, type:'favorites'});
     await saveMixedExams();
-  }else if(state.examMode==='mistakes'){
-    MIXED_EXAMS.push({date:new Date().toISOString(), unitIds: [], score, total:qs.length, took, correctCount, wrongCount, skipped, type:'mistakes'});
-    await saveMixedExams();
   }else{
     const prog = ensureUnitProgress(state.unitId);
     prog.exams = prog.exams || [];
@@ -1747,7 +1630,7 @@ async function finishExam(){
   // Clear the nav stack so pressing back from the result screen goes straight
   // home, instead of re-entering the exam that's already finished.
   state.navStack = [];
-  state = {...state, view:'examResult', unitId: (state.examMode==='mixed'||state.examMode==='favorites'||state.examMode==='mistakes')? null : state.unitId};
+  state = {...state, view:'examResult', unitId: (state.examMode==='mixed'||state.examMode==='favorites')? null : state.unitId};
   try{ history.pushState({view:'examResult', unitId: state.unitId}, '', ''); }catch(e){}
   render();
   window.scrollTo({top:0,behavior:'instant'});
@@ -1840,54 +1723,17 @@ function attachExamResult(){
   document.getElementById('btn-retry').onclick = ()=>{
     if(state.examMode==='mixed') nav('examBuilder',{unitId:null});
     else if(state.examMode==='favorites') nav('favExamConfig',{unitId:null});
-    else if(state.examMode==='mistakes') nav('mistakesExamConfig',{unitId:null});
     else nav('examConfig',{unitId:state.unitId});
   };
 }
 
 /* ================= STATS ================= */
-function allExamHistory(){
-  const list = [];
-  UNITS.forEach(u=>{
-    const prog = PROGRESS[u.id];
-    if(prog && prog.exams) prog.exams.forEach(e=> list.push({date:e.date, pct: pct(Math.max(0,e.score), e.total)}));
-  });
-  MIXED_EXAMS.forEach(e=> list.push({date:e.date, pct: pct(Math.max(0,e.score), e.total)}));
-  list.sort((a,b)=> new Date(a.date) - new Date(b.date));
-  return list;
-}
-function progressChartHTML(){
-  const hist = allExamHistory().slice(-15);
-  if(hist.length < 2) return '';
-  const W = 320, H = 100, pad = 10;
-  const stepX = (W - pad*2) / (hist.length-1);
-  const pts = hist.map((h,i)=>{
-    const x = pad + i*stepX;
-    const y = H - pad - (h.pct/100)*(H-pad*2);
-    return [x,y];
-  });
-  const pathD = pts.map((p,i)=> (i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
-  const areaD = pathD + ` L${pts[pts.length-1][0].toFixed(1)},${H-pad} L${pts[0][0].toFixed(1)},${H-pad} Z`;
-  return `<div class="section-label">সময়ের সাথে অগ্রগতি (শেষ ${hist.length}টি পরীক্ষা)</div>
-  <div class="progress-chart-card">
-    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none">
-      <path d="${areaD}" fill="var(--forest)" opacity="0.15"/>
-      <path d="${pathD}" fill="none" stroke="var(--forest)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      ${pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="var(--forest)"/>`).join('')}
-    </svg>
-    <div class="progress-chart-labels">
-      <span>শুরু ${hist[0].pct}%</span>
-      <span>সর্বশেষ ${hist[hist.length-1].pct}%</span>
-    </div>
-  </div>`;
-}
 function statsHTML(){
-  return `${progressChartHTML()}
-  ${MIXED_EXAMS.length? `<div class="section-label">মিশ্র ও ফেভারিট পরীক্ষার ইতিহাস</div>
+  return `${MIXED_EXAMS.length? `<div class="section-label">মিশ্র ও ফেভারিট পরীক্ষার ইতিহাস</div>
   ${MIXED_EXAMS.slice().reverse().slice(0,10).map(e=>{
     const p = pct(Math.max(0,e.score), e.total);
     const d = new Date(e.date);
-    const label = e.type==='favorites'? `${ICO.heartFill.replace('15','14')} ফেভারিট প্রশ্ন (${e.total}টি)` : e.type==='mistakes'? `${ICO.refresh} ভুল হওয়া প্রশ্ন (${e.total}টি)` : `${e.unitIds.length}টি ইউনিট মিলিয়ে (${e.total}টি প্রশ্ন)`;
+    const label = e.type==='favorites'? `${ICO.heartFill.replace('15','14')} ফেভারিট প্রশ্ন (${e.total}টি)` : `${e.unitIds.length}টি ইউনিট মিলিয়ে (${e.total}টি প্রশ্ন)`;
     return `<div class="stat-card">
       <h4>${label}</h4>
       <div class="stat-nums">
@@ -2018,10 +1864,7 @@ function customHTML(){
     <button class="big-btn amber" id="btn-add-custom" type="button">${ICO.plus} প্রশ্ন যোগ করো</button>
   </div>
 
-  ${list.length? `<div class="q-label-row" style="margin-top:4px;">
-    <div class="section-label" style="margin:0;">তোমার লেখা প্রশ্ন (${list.length}টি)</div>
-    <button class="split-icon-btn" id="btn-export-custom" title="সব প্রশ্ন এক্সপোর্ট/শেয়ার করো">📤</button>
-  </div>
+  ${list.length? `<div class="section-label">তোমার লেখা প্রশ্ন (${list.length}টি)</div>
   ${list.map((q,idx)=>{
     if(state.editOpen.has(q._key)) return editFormHTML(q, idx);
     return `<div class="qcard" data-key="${q._key}">
@@ -2043,12 +1886,6 @@ function customHTML(){
 }
 function attachCustom(){
   const u = UNITS.find(x=>x.id===state.unitId);
-  const exportBtn = document.getElementById('btn-export-custom');
-  if(exportBtn) exportBtn.onclick = ()=>{
-    const list = (CUSTOM_Q[u.id]||[]);
-    const text = exportCustomQuestionsText(list, u.name);
-    showTextModal(`${u.name} — ${list.length}টি প্রশ্ন`, text);
-  };
   ['cf-question','cf-opt0','cf-opt1','cf-opt2','cf-opt3','cf-explanation'].forEach(id=>{
     attachAutoFixPaste(document.getElementById(id));
   });
@@ -2244,103 +2081,6 @@ function attachFavorites(){
       };
     });
   });
-}
-
-function mistakesHTML(){
-  const mistakes = mistakeQuestions();
-  const labels=['ক','খ','গ','ঘ'];
-  if(!mistakes.length) return `<div class="empty"><div class="big">🎉</div>এখন পর্যন্ত কোনো ভুল উত্তর নেই।<br>পড়া বা পরীক্ষা দিলে এখানে তোমার ভুল হওয়া প্রশ্নগুলো জমা হবে, ঠিক করলে এখান থেকে সরে যাবে।</div>`;
-  return `<div class="exam-config" style="margin-bottom:16px;">
-    <h4 class="font-display" style="margin:0 0 8px;font-size:16px;">${ICO.refresh} ${mistakes.length}টি ভুল হওয়া প্রশ্ন</h4>
-    <p style="font-size:12.5px;color:var(--moss);margin:0 0 12px;">উত্তর ঠিক করলে প্রশ্নটা এই তালিকা থেকে বাদ পড়ে যাবে। এখান থেকে পরীক্ষাও দিতে পারো।</p>
-    <button class="big-btn amber" id="btn-mistakes-exam">ভুল প্রশ্ন থেকে পরীক্ষা দাও</button>
-  </div>
-  ${mistakes.map((q,idx)=>{
-    const prog = ensureUnitProgress(q.unitId);
-    const answered = prog.seen && prog.seen[q._key]!==undefined;
-    const selected = answered? prog.seen[q._key] : null;
-    return `<div class="qcard" data-uid="${q.unitId}" data-key="${q._key}">
-      <span class="qnum font-mono">প্রশ্ন ${idx+1} · ইউনিট ${q.unitId}</span>
-      <div class="qtext">${esc(q.question)}</div>
-      <div class="opts">
-      ${q.options.map((opt,oi)=>{
-        let cls='opt-btn';
-        if(answered){
-          if(oi===q.correct) cls+=' correct';
-          else if(oi===selected) cls+=' wrong';
-          else cls+=' dim';
-        }
-        return `<div class="opt-row"><button class="${cls}" data-oi="${oi}"><span class="lbl">${labels[oi]}</span> ${esc(opt)}</button></div>`;
-      }).join('')}
-      </div>
-      ${answered? `<div class="explain"><b>ব্যাখ্যা:</b> ${esc(q.explanation||'কোনো ব্যাখ্যা দেওয়া নেই।')}</div>`:''}
-    </div>`;
-  }).join('')}
-  `;
-}
-function attachMistakes(){
-  const btn = document.getElementById('btn-mistakes-exam');
-  if(btn) btn.onclick = ()=> nav('mistakesExamConfig');
-  document.querySelectorAll('.qcard').forEach(card=>{
-    const uid = Number(card.dataset.uid);
-    const key = card.dataset.key;
-    if(!uid) return;
-    card.querySelectorAll('.opt-btn').forEach(optBtn=>{
-      optBtn.onclick = async ()=>{
-        const oi = Number(optBtn.dataset.oi);
-        const q = allQuestionsFor(uid).find(x=>x._key===key);
-        if(!q) return;
-        const prog = ensureUnitProgress(uid);
-        prog.seen[key] = oi;
-        if(oi===q.correct) prog.correct[key]=true; else delete prog.correct[key];
-        await saveProgress();
-        await bumpStreak();
-        const scrollY = window.scrollY;
-        render();
-        window.scrollTo({top:scrollY, behavior:'instant'});
-      };
-    });
-  });
-}
-function mistakesExamConfigHTML(){
-  const mistakes = mistakeQuestions();
-  const total = mistakes.length;
-  const chosen = state._mistakesExamCount || Math.min(10, total);
-  return `<div class="exam-config">
-    <h4 class="font-display" style="margin:0 0 4px;font-size:17px;">ভুল প্রশ্নের পরীক্ষা সেট করো</h4>
-    <p style="font-size:13px;color:var(--moss);margin:0 0 10px;">মোট ভুল হওয়া প্রশ্ন: ${total}টি। প্রশ্নপ্রতি ৪৫ সেকেন্ড সময় দেওয়া হবে।</p>
-    <div class="neg-mark-note">⚠️ ভুল উত্তরে <b>-০.২৫</b> নম্বর কাটা যাবে। উত্তর না দিলে কোনো নম্বর কাটা হবে না।</div>
-    <div style="font-size:13px;font-weight:600;margin:14px 0 6px;">কতটি প্রশ্ন?</div>
-    ${total>0? countSliderHTML('mistakes-count-slider', total, chosen) : '<div class="count-fixed font-mono">কোনো ভুল হওয়া প্রশ্ন নেই</div>'}
-    <button class="big-btn" id="btn-start-mistakes-exam" ${!total?'disabled style="opacity:.5;"':''}>পরীক্ষা শুরু করো</button>
-  </div>`;
-}
-function attachMistakesExamConfig(){
-  const mistakes = mistakeQuestions();
-  if(!state._mistakesExamCount) state._mistakesExamCount = Math.min(10, mistakes.length);
-  const slider = document.getElementById('mistakes-count-slider');
-  if(slider) slider.oninput = ()=>{
-    state._mistakesExamCount = Number(slider.value);
-    document.getElementById('mistakes-count-slider-val').textContent = state._mistakesExamCount+' টি প্রশ্ন';
-  };
-  const allBtn = document.getElementById('mistakes-count-slider-all');
-  if(allBtn) allBtn.onclick = ()=>{ state._mistakesExamCount = Number(allBtn.dataset.n); render(); };
-  const startBtn = document.getElementById('btn-start-mistakes-exam');
-  if(startBtn) startBtn.onclick = ()=>{
-    const count = state._mistakesExamCount || Math.min(10, mistakes.length);
-    if(!mistakes.length || !count) return;
-    const qs = shuffle(mistakes).slice(0, count);
-    const total_seconds = qs.length*45;
-    state.examQueue = qs;
-    state.examAnswers = {};
-    state.examIndex = 0;
-    state.examTotalSeconds = total_seconds;
-    state.examSecondsLeft = total_seconds;
-    state.examMode = 'mistakes';
-    state.examUnitIds = [];
-    nav('examRun',{unitId:null});
-    startExamTimer();
-  };
 }
 
 function favExamConfigHTML(){

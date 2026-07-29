@@ -41,6 +41,25 @@ jobs:
           fi
           cat "$MANIFEST"
 
+      - name: Apply custom app icon
+        run: |
+          if [ -d "app-icon" ]; then
+            echo "Applying custom app icon..."
+            for d in app-icon/mipmap-*; do
+              density=$(basename "$d")
+              mkdir -p "android/app/src/main/res/$density"
+              cp "$d"/*.png "android/app/src/main/res/$density/" 2>/dev/null || true
+            done
+            if [ -f "app-icon/values/ic_launcher_background.xml" ]; then
+              mkdir -p android/app/src/main/res/values
+              cp "app-icon/values/ic_launcher_background.xml" "android/app/src/main/res/values/ic_launcher_background.xml"
+            fi
+            echo "Icon files applied:"
+            find android/app/src/main/res -iname "ic_launcher*" 
+          else
+            echo "No app-icon folder found, skipping (using default Capacitor icon)"
+          fi
+
       - name: Sync web assets into Android project
         run: npx cap sync android
 
