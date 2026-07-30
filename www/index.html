@@ -26,6 +26,8 @@
   --line:#dcd3ba;
   --shadow: 0 1px 2px rgba(28,43,34,.06), 0 8px 24px rgba(28,43,34,.06);
 }
+body.font-large #app{zoom:1.14;}
+body.font-xlarge #app{zoom:1.28;}
 body.dark-mode{
   --ink:#e9f1ea;
   --forest:#4ea179;
@@ -124,6 +126,13 @@ body{
 .hero .stat{font-family:'JetBrains Mono';}
 .hero .stat b{font-size:16px;display:block;}
 .hero .stat span{font-size:10px;color:#cfe3d3;}
+
+.hero-compact{padding:11px 14px 10px;}
+.hero-compact::after{width:110px;height:110px;}
+.hero-compact-tag{font-size:10px;letter-spacing:.04em;color:#cfe3d3;font-weight:600;margin-bottom:8px;}
+.hero-compact .stat-row{margin-top:0;gap:14px;}
+.hero-compact .stat b{font-size:14px;}
+.hero-compact .stat span{font-size:9px;}
 
 .section-label{
   font-size:12.5px;font-weight:700;color:var(--moss);letter-spacing:.03em;
@@ -584,6 +593,9 @@ footer.note{text-align:center;font-size:11.5px;color:var(--moss);margin-top:30px
 .cm-ok{background:var(--forest); color:#fff;}
 .cm-ok.cm-danger{background:var(--rust);}
 .cm-actions.cm-single .cm-ok{flex:0 0 auto; padding:12px 40px;}
+.settings-block{margin-bottom:18px; padding-bottom:16px; border-bottom:1px solid var(--line);}
+.settings-block:last-of-type{border-bottom:none; margin-bottom:8px; padding-bottom:0;}
+.settings-block-title{font-size:13px; font-weight:700; color:var(--ink);}
 </style>
 </head>
 <body>
@@ -599,7 +611,7 @@ let EDITS = {}; // unitId -> { mcq: {key: {question,options,explanation,correct}
 let MIXED_EXAMS = []; // array of {date, unitIds:[], score, total, took}
 let storageReady = false;
 const LS_KEYS = {progress:'bioapp_progress', custom:'bioapp_custom', edits:'bioapp_edits', mixed:'bioapp_mixed_exams', settings:'bioapp_settings', favorites:'bioapp_favorites', excluded:'bioapp_excluded', streak:'bioapp_streak'};
-let SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false};
+let SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false, fontSize:'normal', reminderOn:false, reminderTime:'20:00'};
 let FAVORITES = new Set(); // set of "uid:key" strings
 
 function lsGetArr(key){
@@ -632,8 +644,11 @@ async function loadStorage(){
   STREAK = lsGet(LS_KEYS.streak);
   if(!STREAK || typeof STREAK.count !== 'number') STREAK = {count:0, lastDate:null};
   const s = lsGet(LS_KEYS.settings);
-  SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false, ...s};
+  SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false, fontSize:'normal', reminderOn:false, reminderTime:'20:00', ...s};
   document.body.classList.toggle('dark-mode', !!SETTINGS.darkMode);
+  document.body.classList.remove('font-large','font-xlarge');
+  if(SETTINGS.fontSize==='large') document.body.classList.add('font-large');
+  if(SETTINGS.fontSize==='xlarge') document.body.classList.add('font-xlarge');
   syncThemeColor();
   FAVORITES = new Set(lsGetArr(LS_KEYS.favorites));
   storageReady = true;
@@ -847,6 +862,174 @@ function showTextModal(title, text){
   }
 }
 
+/* ================= APP SETTINGS: font size, reminder, backup/restore ================= */
+function backupAllDataJSON(){
+  const dump = {};
+  Object.entries(LS_KEYS).forEach(([k, storageKey])=>{
+    const raw = localStorage.getItem(storageKey);
+    if(raw!==null) dump[storageKey] = raw;
+  });
+  return JSON.stringify({app:'bioapp-backup', version:1, date:new Date().toISOString(), data:dump}, null, 0);
+}
+function restoreAllDataFromJSON(text){
+  let parsed;
+  try{ parsed = JSON.parse(text); }
+  catch(e){ showAlert('এই লেখাটা ঠিক ফরম্যাটে নেই, ব্যাকআপ থেকে হুবহু কপি করে পেস্ট করো।'); return false; }
+  if(!parsed || !parsed.data){ showAlert('এটা এই অ্যাপের ব্যাকআপ ফাইল মনে হচ্ছে না।'); return false; }
+  Object.entries(parsed.data).forEach(([storageKey, raw])=>{
+    try{ localStorage.setItem(storageKey, raw); }catch(e){}
+  });
+  return true;
+}
+function showBackupModal(){
+  const text = backupAllDataJSON();
+  showTextModal('তোমার সব ডেটার ব্যাকআপ (কপি করে নিরাপদ জায়গায় রাখো)', text);
+}
+function showRestoreModal(){
+  const overlay = document.createElement('div');
+  overlay.className = 'cm-overlay';
+  overlay.innerHTML = `
+    <div class="cm-box cm-box-wide">
+      <div class="cm-msg" style="text-align:left;font-weight:700;margin-bottom:6px;">ব্যাকআপ থেকে ফিরিয়ে আনো</div>
+      <div class="cm-msg" style="text-align:left;font-size:12.5px;color:var(--moss);margin-bottom:10px;">আগে কপি করা ব্যাকআপ টেক্সটটা নিচে পেস্ট করো। এটা তোমার এখনকার সব ডেটা প্রতিস্থাপন করে দেবে।</div>
+      <textarea class="export-textarea" id="restore-input" placeholder="এখানে ব্যাকআপ টেক্সট পেস্ট করো..."></textarea>
+      <div class="cm-actions" style="margin-top:12px;">
+        <button class="cm-btn cm-cancel" id="rm-close">বাতিল</button>
+        <button class="cm-btn cm-ok cm-danger" id="rm-restore">রিস্টোর করো</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(()=>overlay.classList.add('show'));
+  const close = ()=>{ overlay.classList.remove('show'); setTimeout(()=>overlay.remove(), 180); };
+  overlay.querySelector('#rm-close').onclick = close;
+  overlay.querySelector('#rm-restore').onclick = ()=>{
+    const text = overlay.querySelector('#restore-input').value.trim();
+    if(!text){ showAlert('আগে ব্যাকআপ টেক্সটটা পেস্ট করো।'); return; }
+    showConfirm('এখনকার সব ডেটা মুছে ব্যাকআপ থেকে ফিরিয়ে আনা হবে। আগাতে চাও?', ()=>{
+      const ok = restoreAllDataFromJSON(text);
+      if(ok){
+        close();
+        showAlert('ব্যাকআপ থেকে ফিরিয়ে আনা হয়েছে। অ্যাপটা এখন রিফ্রেশ হবে।', ()=>{ window.location.reload(); });
+      }
+    }, {danger:true, okLabel:'রিস্টোর করো'});
+  };
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) close(); });
+}
+async function scheduleReminder(hour, minute){
+  if(!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications)) return false;
+  const LN = window.Capacitor.Plugins.LocalNotifications;
+  try{
+    const perm = await LN.requestPermissions();
+    if(perm.display !== 'granted') return false;
+    await LN.cancel({ notifications:[{id:9911}] });
+    await LN.schedule({ notifications:[{
+      id:9911, title:'পড়ার সময় হয়েছে 📖',
+      body:'আজকের পড়াটা শেষ করে ধারাবাহিকতা (streak) ধরে রাখো!',
+      schedule:{ on:{hour, minute}, allowWhileIdle:true, repeats:true }
+    }]});
+    return true;
+  }catch(e){ return false; }
+}
+async function cancelReminder(){
+  if(!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications)) return;
+  try{ await window.Capacitor.Plugins.LocalNotifications.cancel({ notifications:[{id:9911}] }); }catch(e){}
+}
+function showAppSettingsModal(){
+  const fontSize = SETTINGS.fontSize || 'normal';
+  const reminderOn = !!SETTINGS.reminderOn;
+  const reminderTime = SETTINGS.reminderTime || '20:00';
+  const hasNative = !!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications);
+  const overlay = document.createElement('div');
+  overlay.className = 'cm-overlay';
+  overlay.innerHTML = `
+    <div class="cm-box cm-box-wide" style="text-align:left;">
+      <div class="cm-msg" style="text-align:left;font-weight:700;margin-bottom:14px;">⚙️ অ্যাপ সেটিংস</div>
+
+      <div class="settings-block">
+        <div class="settings-block-title">লেখার আকার</div>
+        <div class="pill-row" id="font-size-pills" style="margin:6px 0 0;">
+          <button class="pill ${fontSize==='normal'?'active':''}" data-v="normal">স্বাভাবিক</button>
+          <button class="pill ${fontSize==='large'?'active':''}" data-v="large">বড়</button>
+          <button class="pill ${fontSize==='xlarge'?'active':''}" data-v="xlarge">আরও বড়</button>
+        </div>
+      </div>
+
+      <div class="settings-block">
+        <div class="settings-block-title">প্রতিদিন পড়ার রিমাইন্ডার</div>
+        <div class="settings-toggle" style="padding:0;background:none;border:none;box-shadow:none;margin-top:6px;">
+          <div class="st-text"><b>${reminderOn? 'চালু আছে':'বন্ধ আছে'}</b><span>${hasNative? 'নির্দিষ্ট সময়ে একটা নোটিফিকেশন পাবে':'এই ভার্সনে সাপোর্ট নেই (শুধু APK-তে কাজ করে)'}</span></div>
+          <button class="switch ${reminderOn?'on':''}" id="reminder-toggle" ${!hasNative?'disabled style="opacity:.4;"':''}><span class="knob"></span></button>
+        </div>
+        <div style="margin-top:10px; ${reminderOn?'':'display:none;'}" id="reminder-time-row">
+          <label style="font-size:12px;color:var(--moss);display:block;margin-bottom:5px;">সময়</label>
+          <input type="time" id="reminder-time" value="${reminderTime}" style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:14px;background:var(--paper-2);color:var(--ink);">
+        </div>
+      </div>
+
+      <div class="settings-block">
+        <div class="settings-block-title">ডেটা ব্যাকআপ</div>
+        <p style="font-size:12px;color:var(--moss);margin:4px 0 10px;">ফোন পাল্টালে বা অ্যাপ রিইনস্টল করলে তোমার নিজের প্রশ্ন, পরিসংখ্যান, স্ট্রিক — সব হারিয়ে যাবে যদি ব্যাকআপ না রাখো।</p>
+        <div class="row" style="display:flex;gap:8px;">
+          <button class="big-btn ghost" id="btn-backup" style="flex:1;">ব্যাকআপ নাও</button>
+          <button class="big-btn ghost" id="btn-restore" style="flex:1;">রিস্টোর করো</button>
+        </div>
+      </div>
+
+      <div class="cm-actions" style="margin-top:16px;">
+        <button class="cm-btn cm-ok" id="as-close">বন্ধ করো</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(()=>overlay.classList.add('show'));
+  const close = ()=>{ overlay.classList.remove('show'); setTimeout(()=>overlay.remove(), 180); };
+  overlay.querySelector('#as-close').onclick = close;
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) close(); });
+
+  overlay.querySelectorAll('#font-size-pills .pill').forEach(p=>{
+    p.onclick = async ()=>{
+      overlay.querySelectorAll('#font-size-pills .pill').forEach(x=>x.classList.remove('active'));
+      p.classList.add('active');
+      SETTINGS.fontSize = p.dataset.v;
+      document.body.classList.remove('font-large','font-xlarge');
+      if(SETTINGS.fontSize==='large') document.body.classList.add('font-large');
+      if(SETTINGS.fontSize==='xlarge') document.body.classList.add('font-xlarge');
+      await saveSettings();
+    };
+  });
+
+  const reminderToggle = overlay.querySelector('#reminder-toggle');
+  if(reminderToggle) reminderToggle.onclick = async ()=>{
+    const timeRow = overlay.querySelector('#reminder-time-row');
+    const willTurnOn = !SETTINGS.reminderOn;
+    if(willTurnOn){
+      const [h,m] = (overlay.querySelector('#reminder-time').value || reminderTime).split(':').map(Number);
+      const ok = await scheduleReminder(h, m);
+      if(!ok){ showAlert('নোটিফিকেশনের অনুমতি পাওয়া যায়নি। ফোনের সেটিংস থেকে অনুমতি দিয়ে আবার চেষ্টা করো।'); return; }
+      SETTINGS.reminderOn = true;
+      SETTINGS.reminderTime = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+      reminderToggle.classList.add('on');
+      timeRow.style.display = 'block';
+    } else {
+      await cancelReminder();
+      SETTINGS.reminderOn = false;
+      reminderToggle.classList.remove('on');
+      timeRow.style.display = 'none';
+    }
+    await saveSettings();
+  };
+  const reminderTimeInput = overlay.querySelector('#reminder-time');
+  if(reminderTimeInput) reminderTimeInput.onchange = async ()=>{
+    if(!SETTINGS.reminderOn) return;
+    const [h,m] = reminderTimeInput.value.split(':').map(Number);
+    await scheduleReminder(h, m);
+    SETTINGS.reminderTime = reminderTimeInput.value;
+    await saveSettings();
+  };
+
+  overlay.querySelector('#btn-backup').onclick = ()=>{ close(); setTimeout(showBackupModal, 200); };
+  overlay.querySelector('#btn-restore').onclick = ()=>{ close(); setTimeout(showRestoreModal, 200); };
+}
+
 function nav(view, extra={}){
   // remember where we came from so the in-app back button always works,
   // regardless of whether the browser/webview's History API cooperates
@@ -1042,6 +1225,7 @@ function topbarHTML(){
         <button class="kebab-btn" id="study-settings-btn" title="সেটিংস">${ICO.kebab}</button>
         <div class="study-settings-panel" id="study-settings-panel" ${state.studySettingsOpen?'':'hidden'}>${studySettingsToggleHTML()}</div>
       </div>` : ''}
+      <button class="dark-toggle-btn" id="btn-app-settings" title="অ্যাপ সেটিংস">⚙️</button>
       <button class="dark-toggle-btn" id="btn-dark-toggle" title="নাইট মোড">${SETTINGS.darkMode?'☀️':'🌙'}</button>
     </div>
   </div>`;
@@ -1063,6 +1247,8 @@ function attachHandlers(){
     await saveSettings();
     render();
   };
+  const appSettingsBtn = document.getElementById('btn-app-settings');
+  if(appSettingsBtn) appSettingsBtn.onclick = showAppSettingsModal;
 
   if(state.view==='home') attachHome();
   if(state.view==='units') attachUnits();
@@ -1186,15 +1372,13 @@ function homeHTML(){
 
   return `
   ${!STORAGE_OK? `<div style="background:#fbe9e5;border:1px solid var(--rust);border-radius:14px;padding:12px 16px;margin-bottom:16px;font-size:12.5px;color:var(--rust-deep);line-height:1.6;">⚠️ এই ব্রাউজারে সংরক্ষণ (storage) চালু করা যায়নি, তাই তোমার পড়া/এডিট/পরীক্ষার ফলাফল সেভ হবে না।</div>`:''}
-  <div class="hero">
-    <div class="eyebrow">১০টি ইউনিট • ${totalQ}+ MCQ • বাংলা ব্যাখ্যাসহ</div>
-    <h2 class="font-display">শিক্ষক নিবন্ধন<br>জীববিজ্ঞান প্র্যাকটিস</h2>
-    <p>প্রতিটি ইউনিট ধরে ধরে পড়ো, প্র্যাকটিস করো, আর টাইমড এক্সাম দিয়ে নিজেকে যাচাই করো — উত্তর দেওয়ার সাথে সাথেই ব্যাখ্যা দেখতে পাবে।</p>
+  <div class="hero hero-compact">
+    <div class="hero-compact-tag">১০টি ইউনিট • ${totalQ}+ MCQ • বাংলা ব্যাখ্যাসহ</div>
     <div class="stat-row">
       <div class="stat"><b>${totalQ}</b><span>মোট প্রশ্ন</span></div>
-      <div class="stat"><b>${totalExams}</b><span>দেওয়া পরীক্ষা</span></div>
+      <div class="stat"><b>${totalExams}</b><span>পরীক্ষা</span></div>
       <div class="stat"><b>${avgScore!==null? avgScore+'%':'—'}</b><span>গড় স্কোর</span></div>
-      ${STREAK.count>0? `<div class="stat streak-stat"><b>🔥 ${STREAK.count}</b><span>দিন ধারাবাহিক</span></div>`:''}
+      ${STREAK.count>0? `<div class="stat streak-stat"><b>🔥${STREAK.count}</b><span>দিন ধারা.</span></div>`:''}
     </div>
   </div>
 
@@ -2400,6 +2584,10 @@ function emptyHTML(msg){
   }catch(e){}
   await loadStorage();
   render();
+  if(SETTINGS.reminderOn){
+    const [h,m] = (SETTINGS.reminderTime||'20:00').split(':').map(Number);
+    scheduleReminder(h,m).catch(()=>{});
+  }
 })();
 
 </script>
