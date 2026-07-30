@@ -596,6 +596,13 @@ footer.note{text-align:center;font-size:11.5px;color:var(--moss);margin-top:30px
 .settings-block{margin-bottom:18px; padding-bottom:16px; border-bottom:1px solid var(--line);}
 .settings-block:last-of-type{border-bottom:none; margin-bottom:8px; padding-bottom:0;}
 .settings-block-title{font-size:13px; font-weight:700; color:var(--ink);}
+.mini-toast{
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--forest); color:#fff; padding:11px 18px; border-radius:999px;
+  font-size:13px; font-weight:600; z-index:300; opacity:0; transition:opacity .25s ease, transform .25s ease;
+  box-shadow:0 6px 20px rgba(0,0,0,0.25); max-width:85%; text-align:center;
+}
+.mini-toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 </style>
 </head>
 <body>
@@ -867,23 +874,81 @@ function backupAllDataJSON(){
   const dump = {};
   Object.entries(LS_KEYS).forEach(([k, storageKey])=>{
     const raw = localStorage.getItem(storageKey);
-    if(raw!==null) dump[storageKey] = raw;
+    if(raw===null) return;
+    try{ dump[storageKey] = JSON.parse(raw); }
+    catch(e){ dump[storageKey] = raw; }
   });
-  return JSON.stringify({app:'bioapp-backup', version:1, date:new Date().toISOString(), data:dump}, null, 0);
+  return JSON.stringify({app:'bioapp-backup', version:1, date:new Date().toISOString(), data:dump}, null, 2);
 }
 function restoreAllDataFromJSON(text){
   let parsed;
   try{ parsed = JSON.parse(text); }
-  catch(e){ showAlert('এই লেখাটা ঠিক ফরম্যাটে নেই, ব্যাকআপ থেকে হুবহু কপি করে পেস্ট করো।'); return false; }
+  catch(e){ showAlert('এই ফাইল/লেখাটা ঠিক ফরম্যাটে নেই।'); return false; }
   if(!parsed || !parsed.data){ showAlert('এটা এই অ্যাপের ব্যাকআপ ফাইল মনে হচ্ছে না।'); return false; }
-  Object.entries(parsed.data).forEach(([storageKey, raw])=>{
-    try{ localStorage.setItem(storageKey, raw); }catch(e){}
+  Object.entries(parsed.data).forEach(([storageKey, value])=>{
+    try{ localStorage.setItem(storageKey, JSON.stringify(value)); }catch(e){}
   });
   return true;
 }
+function downloadBackupFile(){
+  const text = backupAllDataJSON();
+  const filename = `biology-app-backup-${todayStr()}.json`;
+  try{
+    const blob = new Blob([text], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    return true;
+  }catch(e){ return false; }
+}
 function showBackupModal(){
   const text = backupAllDataJSON();
-  showTextModal('তোমার সব ডেটার ব্যাকআপ (কপি করে নিরাপদ জায়গায় রাখো)', text);
+  const overlay = document.createElement('div');
+  overlay.className = 'cm-overlay';
+  overlay.innerHTML = `
+    <div class="cm-box cm-box-wide">
+      <div class="cm-msg" style="text-align:left;font-weight:700;margin-bottom:10px;">তোমার সব ডেটার ব্যাকআপ</div>
+      <div class="cm-msg" style="text-align:left;font-size:12.5px;color:var(--moss);margin-bottom:12px;">নিচের বাটনে ফাইল হিসেবে সেভ করো — এই ফাইলটাই পরে রিস্টোর করার সময় বেছে দিলেই চলবে।</div>
+      <button class="big-btn" id="bm-download" style="margin-bottom:10px;">📥 ফাইল হিসেবে সেভ করো</button>
+      <details style="margin-top:4px;">
+        <summary style="font-size:12px;color:var(--moss);cursor:pointer;">ফাইল সেভ না হলে — লেখা হিসেবে কপি করো</summary>
+        <textarea class="export-textarea" readonly style="margin-top:10px;height:160px;">${esc(text)}</textarea>
+      </details>
+      <div class="cm-actions" style="margin-top:14px;">
+        <button class="cm-btn cm-cancel" id="bm-close">বন্ধ করো</button>
+        <button class="cm-btn cm-ok" id="bm-copy">লেখা কপি করো</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(()=>overlay.classList.add('show'));
+  const close = ()=>{ overlay.classList.remove('show'); setTimeout(()=>overlay.remove(), 180); };
+  overlay.querySelector('#bm-close').onclick = close;
+  overlay.querySelector('#bm-download').onclick = ()=>{
+    const ok = downloadBackupFile();
+    if(!ok) showAlert('ফাইল সেভ করা যায়নি, নিচের "লেখা কপি করো" ব্যবহার করো।');
+    else showToastMini('ব্যাকআপ ফাইল সেভ হয়েছে (Downloads ফোল্ডারে)');
+  };
+  overlay.querySelector('#bm-copy').onclick = async ()=>{
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(text);
+      const btn = overlay.querySelector('#bm-copy');
+      btn.textContent = '✓ কপি হয়েছে!';
+      setTimeout(()=>{ btn.textContent = 'লেখা কপি করো'; }, 1500);
+    }catch(e){ showAlert('কপি করা যায়নি।'); }
+  };
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) close(); });
+}
+function showToastMini(msg){
+  const t = document.createElement('div');
+  t.className = 'mini-toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(()=>t.classList.add('show'));
+  setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(), 300); }, 2200);
 }
 function showRestoreModal(){
   const overlay = document.createElement('div');
@@ -891,9 +956,15 @@ function showRestoreModal(){
   overlay.innerHTML = `
     <div class="cm-box cm-box-wide">
       <div class="cm-msg" style="text-align:left;font-weight:700;margin-bottom:6px;">ব্যাকআপ থেকে ফিরিয়ে আনো</div>
-      <div class="cm-msg" style="text-align:left;font-size:12.5px;color:var(--moss);margin-bottom:10px;">আগে কপি করা ব্যাকআপ টেক্সটটা নিচে পেস্ট করো। এটা তোমার এখনকার সব ডেটা প্রতিস্থাপন করে দেবে।</div>
-      <textarea class="export-textarea" id="restore-input" placeholder="এখানে ব্যাকআপ টেক্সট পেস্ট করো..."></textarea>
-      <div class="cm-actions" style="margin-top:12px;">
+      <div class="cm-msg" style="text-align:left;font-size:12.5px;color:var(--moss);margin-bottom:12px;">সেভ করা ব্যাকআপ ফাইলটা বেছে দাও। এটা তোমার এখনকার সব ডেটা প্রতিস্থাপন করে দেবে।</div>
+      <button class="big-btn ghost" id="rm-pick-file" style="margin-bottom:10px;">📂 ব্যাকআপ ফাইল বেছে নাও</button>
+      <input type="file" id="rm-file-input" accept="application/json,.json,.txt" style="display:none;">
+      <div id="rm-file-status" style="font-size:12.5px;color:var(--moss);margin-bottom:6px;"></div>
+      <details>
+        <summary style="font-size:12px;color:var(--moss);cursor:pointer;">ফাইল বেছে নিতে সমস্যা হলে — লেখা পেস্ট করো</summary>
+        <textarea class="export-textarea" id="restore-input" placeholder="এখানে ব্যাকআপ টেক্সট পেস্ট করো..." style="margin-top:10px;height:140px;"></textarea>
+      </details>
+      <div class="cm-actions" style="margin-top:14px;">
         <button class="cm-btn cm-cancel" id="rm-close">বাতিল</button>
         <button class="cm-btn cm-ok cm-danger" id="rm-restore">রিস্টোর করো</button>
       </div>
@@ -902,9 +973,23 @@ function showRestoreModal(){
   requestAnimationFrame(()=>overlay.classList.add('show'));
   const close = ()=>{ overlay.classList.remove('show'); setTimeout(()=>overlay.remove(), 180); };
   overlay.querySelector('#rm-close').onclick = close;
+  let pickedFileText = null;
+  const fileInput = overlay.querySelector('#rm-file-input');
+  overlay.querySelector('#rm-pick-file').onclick = ()=> fileInput.click();
+  fileInput.onchange = ()=>{
+    const file = fileInput.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      pickedFileText = reader.result;
+      overlay.querySelector('#rm-file-status').textContent = '✓ বেছে নেওয়া হয়েছে: ' + file.name;
+    };
+    reader.onerror = ()=>{ showAlert('ফাইলটা পড়া যায়নি।'); };
+    reader.readAsText(file);
+  };
   overlay.querySelector('#rm-restore').onclick = ()=>{
-    const text = overlay.querySelector('#restore-input').value.trim();
-    if(!text){ showAlert('আগে ব্যাকআপ টেক্সটটা পেস্ট করো।'); return; }
+    const text = pickedFileText || overlay.querySelector('#restore-input').value.trim();
+    if(!text){ showAlert('আগে ব্যাকআপ ফাইল বেছে নাও, অথবা লেখা পেস্ট করো।'); return; }
     showConfirm('এখনকার সব ডেটা মুছে ব্যাকআপ থেকে ফিরিয়ে আনা হবে। আগাতে চাও?', ()=>{
       const ok = restoreAllDataFromJSON(text);
       if(ok){
