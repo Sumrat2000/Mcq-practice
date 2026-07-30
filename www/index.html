@@ -890,9 +890,24 @@ function restoreAllDataFromJSON(text){
   });
   return true;
 }
-function downloadBackupFile(){
+async function downloadBackupFile(){
   const text = backupAllDataJSON();
   const filename = `biology-app-backup-${todayStr()}.json`;
+  const FS = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem;
+  if(FS){
+    try{
+      const res = await FS.writeFile({
+        path: filename,
+        data: text,
+        directory: 'DOCUMENTS',
+        encoding: 'utf8'
+      });
+      return { ok:true, path: res && res.uri ? res.uri : filename };
+    }catch(e){
+      return { ok:false, error: e && e.message };
+    }
+  }
+  // Fallback for plain-browser/testing context (not the real Android app)
   try{
     const blob = new Blob([text], {type:'application/json'});
     const url = URL.createObjectURL(blob);
@@ -902,8 +917,8 @@ function downloadBackupFile(){
     a.click();
     document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(url), 2000);
-    return true;
-  }catch(e){ return false; }
+    return { ok:true, path: filename };
+  }catch(e){ return { ok:false, error: e && e.message }; }
 }
 function showBackupModal(){
   const text = backupAllDataJSON();
@@ -927,10 +942,13 @@ function showBackupModal(){
   requestAnimationFrame(()=>overlay.classList.add('show'));
   const close = ()=>{ overlay.classList.remove('show'); setTimeout(()=>overlay.remove(), 180); };
   overlay.querySelector('#bm-close').onclick = close;
-  overlay.querySelector('#bm-download').onclick = ()=>{
-    const ok = downloadBackupFile();
-    if(!ok) showAlert('ফাইল সেভ করা যায়নি, নিচের "লেখা কপি করো" ব্যবহার করো।');
-    else showToastMini('ব্যাকআপ ফাইল সেভ হয়েছে (Downloads ফোল্ডারে)');
+  overlay.querySelector('#bm-download').onclick = async ()=>{
+    const btn = overlay.querySelector('#bm-download');
+    btn.textContent = 'সেভ হচ্ছে...';
+    const result = await downloadBackupFile();
+    btn.textContent = '📥 ফাইল হিসেবে সেভ করো';
+    if(!result.ok) showAlert('ফাইল সেভ করা যায়নি (' + (result.error||'অজানা কারণ') + ')। নিচের "লেখা কপি করো" ব্যবহার করো।');
+    else showAlert('ব্যাকআপ ফাইল সেভ হয়েছে:\n' + result.path + '\n\n(ফোনের Files অ্যাপে "Documents" ফোল্ডারে খুঁজে পাবে)');
   };
   overlay.querySelector('#bm-copy').onclick = async ()=>{
     try{
