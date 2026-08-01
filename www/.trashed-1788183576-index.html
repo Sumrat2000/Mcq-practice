@@ -153,8 +153,8 @@ body{
 .unit-ring{flex-shrink:0;position:relative;width:52px;height:52px;}
 .unit-ring svg{transform:rotate(-90deg);}
 .unit-ring .num{
-  position:absolute;inset:6px;display:flex;align-items:center;justify-content:center;
-  font-size:20px;border-radius:50%;
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono';font-weight:700;font-size:15px;color:var(--forest);
 }
 .unit-info{flex:1;min-width:0;}
 .unit-info h3{font-family:'Baloo Da 2';font-size:15.5px;margin:0 0 4px;color:var(--ink);font-weight:600;line-height:1.3;}
@@ -181,11 +181,7 @@ body{
 /* ---------- unit hub ---------- */
 .unit-header{
   background:var(--card);border:1px solid var(--line);border-radius:18px;
-  padding:18px;margin-bottom:16px;box-shadow:var(--shadow);position:relative;
-}
-.unit-header-icon{
-  width:44px;height:44px;border-radius:14px;font-size:24px;
-  display:flex;align-items:center;justify-content:center;margin-bottom:10px;
+  padding:18px;margin-bottom:16px;box-shadow:var(--shadow);
 }
 .unit-header .tag{
   display:inline-block;font-family:'JetBrains Mono';font-size:11px;font-weight:700;
@@ -399,16 +395,8 @@ body{
 .tab-btn.active{background:var(--card);color:var(--forest);box-shadow:0 1px 3px rgba(0,0,0,.08);}
 .ai-badge{font-family:'JetBrains Mono';font-size:10px;background:#e5f0e8;color:var(--leaf-deep);padding:2px 7px;border-radius:20px;margin-right:6px;}
 
-.empty{text-align:center;padding:44px 24px;color:var(--moss);}
-.empty .big{
-  font-size:44px;margin:0 auto 14px;width:84px;height:84px;border-radius:50%;
-  background:var(--paper-2);display:flex;align-items:center;justify-content:center;
-  animation:empty-pop .5s cubic-bezier(.34,1.56,.64,1) both;
-}
-@keyframes empty-pop{
-  0%{ transform:scale(0.6); opacity:0; }
-  100%{ transform:scale(1); opacity:1; }
-}
+.empty{text-align:center;padding:40px 20px;color:var(--moss);}
+.empty .big{font-size:34px;margin-bottom:8px;}
 
 footer.note{text-align:center;font-size:11.5px;color:var(--moss);margin-top:30px;line-height:1.6;}
 
@@ -615,17 +603,6 @@ footer.note{text-align:center;font-size:11.5px;color:var(--moss);margin-top:30px
   box-shadow:0 6px 20px rgba(0,0,0,0.25); max-width:85%; text-align:center;
 }
 .mini-toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
-
-.confetti-layer{position:fixed; inset:0; pointer-events:none; z-index:400; overflow:hidden;}
-.confetti-piece{
-  position:absolute; top:-10px; border-radius:2px;
-  animation-name:confetti-fall; animation-timing-function:ease-in; animation-fill-mode:forwards;
-  opacity:0.95;
-}
-@keyframes confetti-fall{
-  0%{ transform:translate(0,0) rotate(0deg); opacity:1; }
-  100%{ transform:translate(var(--drift), 100vh) rotate(var(--rot)); opacity:0; }
-}
 </style>
 </head>
 <body>
@@ -641,7 +618,7 @@ let EDITS = {}; // unitId -> { mcq: {key: {question,options,explanation,correct}
 let MIXED_EXAMS = []; // array of {date, unitIds:[], score, total, took}
 let storageReady = false;
 const LS_KEYS = {progress:'bioapp_progress', custom:'bioapp_custom', edits:'bioapp_edits', mixed:'bioapp_mixed_exams', settings:'bioapp_settings', favorites:'bioapp_favorites', excluded:'bioapp_excluded', streak:'bioapp_streak'};
-let SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false, fontSize:'normal', reminderOn:false, reminderTime:'20:00', soundEnabled: true};
+let SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false, fontSize:'normal', reminderOn:false, reminderTime:'20:00'};
 let FAVORITES = new Set(); // set of "uid:key" strings
 
 function lsGetArr(key){
@@ -674,7 +651,7 @@ async function loadStorage(){
   STREAK = lsGet(LS_KEYS.streak);
   if(!STREAK || typeof STREAK.count !== 'number') STREAK = {count:0, lastDate:null};
   const s = lsGet(LS_KEYS.settings);
-  SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false, fontSize:'normal', reminderOn:false, reminderTime:'20:00', soundEnabled: true, ...s};
+  SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false, fontSize:'normal', reminderOn:false, reminderTime:'20:00', ...s};
   document.body.classList.toggle('dark-mode', !!SETTINGS.darkMode);
   document.body.classList.remove('font-large','font-xlarge');
   if(SETTINGS.fontSize==='large') document.body.classList.add('font-large');
@@ -683,34 +660,6 @@ async function loadStorage(){
   FAVORITES = new Set(lsGetArr(LS_KEYS.favorites));
   storageReady = true;
 }
-let audioCtx = null;
-function getAudioCtx(){
-  if(!audioCtx){
-    try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ return null; }
-  }
-  if(audioCtx.state==='suspended') audioCtx.resume().catch(()=>{});
-  return audioCtx;
-}
-function playTone(freq, duration, type='sine', vol=0.15){
-  if(!SETTINGS.soundEnabled) return;
-  const ctx = getAudioCtx();
-  if(!ctx) return;
-  try{
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = type;
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(vol, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + duration);
-  }catch(e){}
-}
-function playCorrectSound(){ playTone(660,0.12); setTimeout(()=>playTone(880,0.16),90); }
-function playWrongSound(){ playTone(220,0.22,'sine',0.12); }
-
 function todayStr(){
   const d = new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -1092,7 +1041,6 @@ function showAppSettingsModal(){
   const fontSize = SETTINGS.fontSize || 'normal';
   const reminderOn = !!SETTINGS.reminderOn;
   const reminderTime = SETTINGS.reminderTime || '20:00';
-  const soundOn = SETTINGS.soundEnabled !== false;
   const hasNative = !!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications);
   const overlay = document.createElement('div');
   overlay.className = 'cm-overlay';
@@ -1106,14 +1054,6 @@ function showAppSettingsModal(){
           <button class="pill ${fontSize==='normal'?'active':''}" data-v="normal">স্বাভাবিক</button>
           <button class="pill ${fontSize==='large'?'active':''}" data-v="large">বড়</button>
           <button class="pill ${fontSize==='xlarge'?'active':''}" data-v="xlarge">আরও বড়</button>
-        </div>
-      </div>
-
-      <div class="settings-block">
-        <div class="settings-block-title">সাউন্ড এফেক্ট</div>
-        <div class="settings-toggle" style="padding:0;background:none;border:none;box-shadow:none;margin-top:6px;">
-          <div class="st-text"><b>${soundOn? 'চালু আছে':'বন্ধ আছে'}</b><span>উত্তর দিলে ছোট্ট শব্দ শুনবে</span></div>
-          <button class="switch ${soundOn?'on':''}" id="sound-toggle"><span class="knob"></span></button>
         </div>
       </div>
 
@@ -1159,16 +1099,6 @@ function showAppSettingsModal(){
       await saveSettings();
     };
   });
-
-  const soundToggle = overlay.querySelector('#sound-toggle');
-  if(soundToggle) soundToggle.onclick = async ()=>{
-    SETTINGS.soundEnabled = SETTINGS.soundEnabled===false ? true : false;
-    soundToggle.classList.toggle('on', SETTINGS.soundEnabled);
-    const label = soundToggle.parentElement.querySelector('.st-text b');
-    if(label) label.textContent = SETTINGS.soundEnabled? 'চালু আছে':'বন্ধ আছে';
-    await saveSettings();
-    if(SETTINGS.soundEnabled) playCorrectSound();
-  };
 
   const reminderToggle = overlay.querySelector('#reminder-toggle');
   if(reminderToggle) reminderToggle.onclick = async ()=>{
@@ -1325,19 +1255,6 @@ function pagerNumsHTML(page, totalPages){
   return html;
 }
 function pct(n,d){ return d? Math.round(n/d*100):0; }
-const UNIT_THEME = {
-  1:{icon:'🔬', color:'#2c6a4e'},
-  2:{icon:'🌿', color:'#1fa393'},
-  3:{icon:'🦠', color:'#9b6fd1'},
-  4:{icon:'☀️', color:'#e08a4f'},
-  5:{icon:'🍎', color:'#d1594f'},
-  6:{icon:'🧠', color:'#5a7fc4'},
-  7:{icon:'🌸', color:'#e0708a'},
-  8:{icon:'🦋', color:'#3fae86'},
-  9:{icon:'🧬', color:'#7a6fc4'},
-  10:{icon:'⚗️', color:'#d1a94f'}
-};
-function unitTheme(uid){ return UNIT_THEME[uid] || {icon:'📘', color:'#4a8a5c'}; }
 function ringSVG(percent, size=52){
   const r=(size/2)-5, c=2*Math.PI*r, off=c*(1-percent/100);
   const color = percent>=70? 'var(--leaf)' : percent>=35? 'var(--amber)' : 'var(--line)';
@@ -1651,9 +1568,8 @@ function unitsHTML(){
     ${UNITS.map(u=>{
       const p = unitStudyPercent(u.id);
       const customCount = (CUSTOM_Q[u.id]||[]).length;
-      const theme = unitTheme(u.id);
       return `<button class="unit-card" data-uid="${u.id}">
-        <div class="unit-ring">${ringSVG(p)}<div class="num" style="background:${theme.color}20;">${theme.icon}</div></div>
+        <div class="unit-ring">${ringSVG(p)}<div class="num">${u.id}</div></div>
         <div class="unit-info">
           <h3>${esc(u.name)}</h3>
           <div class="meta"><span><b>${u.questions.length}</b> MCQ</span>${customCount? `<span><b>${customCount}</b> নিজের</span>`:''}<span>${p}% পড়া হয়েছে</span></div>
@@ -1681,7 +1597,6 @@ function unitHTML(){
 
   return `
   <div class="unit-header">
-    <div class="unit-header-icon" style="background:${unitTheme(u.id).color}20;">${unitTheme(u.id).icon}</div>
     <span class="tag font-mono">UNIT ${u.id} / 10</span>
     <h2>${esc(u.name)}</h2>
     <div class="desc">${u.questions.length}টি MCQ${customCount? ' • '+customCount+'টি নিজের প্রশ্ন':''} — এখন পর্যন্ত ${p}% পড়া হয়েছে${best!==null? ' • সেরা স্কোর '+best+'%':''}</div>
@@ -1890,7 +1805,6 @@ function attachStudy(){
         state.sessionSeen[key] = oi; // visual lock, resets next visit
         prog.seen[key] = oi; // permanent record, powers পরিসংখ্যান stats
         if(oi===q.correct) prog.correct[key]=true; else delete prog.correct[key];
-        if(oi===q.correct) playCorrectSound(); else playWrongSound();
         if(!state.sessionTally) state.sessionTally = {correct:0, wrong:0};
         if(oi===q.correct) state.sessionTally.correct++; else state.sessionTally.wrong++;
         state.pendingAnswerKey[u.id] = key;
@@ -2174,15 +2088,15 @@ function examResultHTML(){
     <div class="donut-wrap">
       <svg width="130" height="130" viewBox="0 0 130 130">
         <circle cx="65" cy="65" r="${R}" fill="none" stroke="var(--paper-2)" stroke-width="14"/>
-        <circle id="donut-seg-correct" cx="65" cy="65" r="${R}" fill="none" stroke="var(--forest)" stroke-width="14"
-          stroke-dasharray="0 ${C}" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 65 65)" data-target="${cSeg}"/>
-        <circle id="donut-seg-wrong" cx="65" cy="65" r="${R}" fill="none" stroke="var(--rust)" stroke-width="14"
-          stroke-dasharray="0 ${C}" stroke-dashoffset="-${cSeg}" stroke-linecap="round" transform="rotate(-90 65 65)" data-target="${wSeg}"/>
-        <circle id="donut-seg-skip" cx="65" cy="65" r="${R}" fill="none" stroke="#c9c2ae" stroke-width="14"
-          stroke-dasharray="0 ${C}" stroke-dashoffset="-${cSeg+wSeg}" stroke-linecap="round" transform="rotate(-90 65 65)" data-target="${sSeg}"/>
+        <circle cx="65" cy="65" r="${R}" fill="none" stroke="var(--forest)" stroke-width="14"
+          stroke-dasharray="${cSeg} ${C-cSeg}" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 65 65)"/>
+        <circle cx="65" cy="65" r="${R}" fill="none" stroke="var(--rust)" stroke-width="14"
+          stroke-dasharray="${wSeg} ${C-wSeg}" stroke-dashoffset="-${cSeg}" stroke-linecap="round" transform="rotate(-90 65 65)"/>
+        <circle cx="65" cy="65" r="${R}" fill="none" stroke="#c9c2ae" stroke-width="14"
+          stroke-dasharray="${sSeg} ${C-sSeg}" stroke-dashoffset="-${cSeg+wSeg}" stroke-linecap="round" transform="rotate(-90 65 65)"/>
       </svg>
       <div class="donut-center">
-        <div class="donut-score font-display" id="donut-score-num" data-target="${r.score}">০</div>
+        <div class="donut-score font-display">${fmtScore(r.score)}</div>
         <div class="donut-total">/${r.total}</div>
       </div>
     </div>
@@ -2216,65 +2130,6 @@ function attachExamResult(){
     else if(state.examMode==='mistakes') nav('mistakesExamConfig',{unitId:null});
     else nav('examConfig',{unitId:state.unitId});
   };
-
-  // animate the donut ring drawing in
-  ['donut-seg-correct','donut-seg-wrong','donut-seg-skip'].forEach((id,i)=>{
-    const el = document.getElementById(id);
-    if(!el) return;
-    const target = parseFloat(el.dataset.target)||0;
-    setTimeout(()=>{
-      el.style.transition = 'stroke-dasharray .7s cubic-bezier(.22,.9,.32,1)';
-      el.setAttribute('stroke-dasharray', `${target} 1000`);
-    }, 80 + i*90);
-  });
-
-  // animate the score counting up from 0
-  const scoreEl = document.getElementById('donut-score-num');
-  if(scoreEl){
-    const target = parseFloat(scoreEl.dataset.target)||0;
-    const dur = 700;
-    const start = performance.now();
-    function step(now){
-      const t = Math.min(1, (now-start)/dur);
-      const eased = 1 - Math.pow(1-t, 3);
-      scoreEl.textContent = fmtScore(target*eased);
-      if(t<1) requestAnimationFrame(step);
-      else scoreEl.textContent = fmtScore(target);
-    }
-    requestAnimationFrame(step);
-  }
-
-  // celebrate a strong result
-  const r = state.examResult;
-  const p = pct(Math.max(0,r.score), r.total);
-  if(p>=70) setTimeout(()=>fireConfetti(), 300);
-}
-function fireConfetti(){
-  const colors = ['#4ea179','#e08a4f','#c94d6d','#5a7fc4','#d1a94f','#3fae86'];
-  const container = document.createElement('div');
-  container.className = 'confetti-layer';
-  const count = 46;
-  for(let i=0;i<count;i++){
-    const piece = document.createElement('div');
-    piece.className = 'confetti-piece';
-    const startX = 50 + (Math.random()*60-30);
-    const drift = (Math.random()*140-70);
-    const rot = Math.random()*720-360;
-    const dur = 1.4 + Math.random()*1.1;
-    const delay = Math.random()*0.25;
-    const size = 6 + Math.random()*6;
-    piece.style.left = startX+'%';
-    piece.style.width = size+'px';
-    piece.style.height = (size*0.4)+'px';
-    piece.style.background = colors[i%colors.length];
-    piece.style.setProperty('--drift', drift+'px');
-    piece.style.setProperty('--rot', rot+'deg');
-    piece.style.animationDuration = dur+'s';
-    piece.style.animationDelay = delay+'s';
-    container.appendChild(piece);
-  }
-  document.body.appendChild(container);
-  setTimeout(()=>container.remove(), 3000);
 }
 
 /* ================= STATS ================= */
@@ -2725,7 +2580,6 @@ function attachMistakes(){
         const prog = ensureUnitProgress(uid);
         prog.seen[key] = oi;
         if(oi===q.correct) prog.correct[key]=true; else delete prog.correct[key];
-        if(oi===q.correct) playCorrectSound(); else playWrongSound();
         await saveProgress();
         await bumpStreak();
         const scrollY = window.scrollY;
