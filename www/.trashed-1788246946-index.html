@@ -134,34 +134,6 @@ body{
 .hero-compact .stat b{font-size:14px;}
 .hero-compact .stat span{font-size:9px;}
 
-.level-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
-.level-badge{font-size:10.5px;font-weight:700;color:#fff;white-space:nowrap;}
-.level-track{flex:1;height:5px;background:rgba(255,255,255,0.22);border-radius:999px;overflow:hidden;}
-.level-fill{height:100%;background:#fff;border-radius:999px;transition:width .4s ease;}
-.level-pts{font-size:10px;color:#cfe3d3;white-space:nowrap;}
-
-.levelup-icon{font-size:48px;margin-bottom:8px;animation:empty-pop .5s cubic-bezier(.34,1.56,.64,1) both;}
-
-.badge-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.badge-card{
-  background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 12px;
-  text-align:center;box-shadow:var(--shadow);
-}
-.badge-card.locked{opacity:0.45;}
-.badge-icon{font-size:30px;margin-bottom:8px;}
-.badge-name{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:3px;line-height:1.35;}
-.badge-desc{font-size:10.5px;color:var(--moss);line-height:1.4;}
-.radar-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:16px;box-shadow:var(--shadow);text-align:center;}
-.radar-hint{font-size:11px;color:var(--moss);margin-top:6px;}
-
-.onboard-box{text-align:center;max-width:380px;}
-.onboard-icon{font-size:52px;margin-bottom:12px;animation:empty-pop .5s cubic-bezier(.34,1.56,.64,1) both;}
-.onboard-title{font-family:'Baloo Da 2';font-size:19px;color:var(--ink);margin-bottom:10px;font-weight:700;}
-.onboard-body{font-size:13.5px;color:var(--moss);line-height:1.7;margin-bottom:18px;}
-.onboard-dots{display:flex;justify-content:center;gap:6px;margin-bottom:18px;}
-.onboard-dot{width:7px;height:7px;border-radius:50%;background:var(--line);transition:background .2s,transform .2s;}
-.onboard-dot.active{background:var(--forest);transform:scale(1.3);}
-
 .section-label{
   font-size:12.5px;font-weight:700;color:var(--moss);letter-spacing:.03em;
   margin:22px 4px 10px;display:flex;align-items:center;gap:8px;
@@ -234,45 +206,6 @@ body{
 .mode-card.full{grid-column:1/-1;display:flex;align-items:center;gap:14px;}
 .mode-card.full .icon{margin-bottom:0;flex-shrink:0;}
 
-/* ---------- flashcards ---------- */
-.fc-progress{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
-.fc-progress-track{flex:1;height:6px;background:var(--paper-2);border-radius:999px;overflow:hidden;}
-.fc-progress-fill{height:100%;border-radius:999px;transition:width .3s ease;}
-.fc-progress span{font-size:12px;color:var(--moss);font-weight:600;}
-
-.flashcard-stage{perspective:1200px;margin-bottom:16px;}
-.flashcard{
-  position:relative; min-height:280px; border-radius:20px; cursor:pointer;
-  transform-style:preserve-3d; transition:transform .5s cubic-bezier(.4,0,.2,1);
-}
-.flashcard.flipped{transform:rotateY(180deg);}
-.fc-face{
-  position:absolute; inset:0; backface-visibility:hidden; border-radius:20px;
-  padding:26px 22px; display:flex; flex-direction:column; box-shadow:var(--shadow);
-  box-sizing:border-box;
-}
-.fc-front{background:var(--card); border:1px solid var(--line);}
-.fc-back{background:linear-gradient(160deg,var(--forest),var(--forest-light)); color:#fff; transform:rotateY(180deg);}
-.fc-tag{display:inline-block;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;margin-bottom:14px;align-self:flex-start;color:var(--forest);}
-.fc-tag.good{background:rgba(255,255,255,0.2);color:#fff;}
-.fc-question{font-family:'Baloo Da 2';font-size:19px;line-height:1.5;color:var(--ink);flex:1;display:flex;align-items:center;}
-.fc-hint{font-size:11.5px;color:var(--moss);text-align:center;margin-top:10px;}
-.fc-answer{font-size:19px;font-weight:700;line-height:1.5;margin-bottom:10px;}
-.fc-explain{font-size:13px;line-height:1.6;color:#e5f0e8;flex:1;overflow-y:auto;}
-
-.fc-actions{display:flex;gap:10px;margin-bottom:8px;}
-.fc-btn{flex:1;border:none;border-radius:14px;padding:14px;font-size:14.5px;font-weight:700;cursor:pointer;font-family:'Hind Siliguri',sans-serif;}
-.fc-no{background:#fbe9e5;color:var(--rust-deep);}
-.fc-yes{background:#eaf3ec;color:var(--leaf-deep);}
-.fc-swipe-hint{text-align:center;font-size:11px;color:var(--moss);}
-
-.fc-done{text-align:center;padding:40px 20px;}
-.fc-done-emoji{font-size:48px;margin-bottom:10px;}
-.fc-done h3{font-family:'Baloo Da 2';font-size:18px;color:var(--ink);margin:0 0 16px;}
-.fc-done-stats{display:flex;justify-content:center;gap:24px;}
-.fc-done-stats div b{display:block;font-size:22px;font-family:'JetBrains Mono';color:var(--forest);}
-.fc-done-stats div span{font-size:12px;color:var(--moss);}
-
 /* ---------- study list ---------- */
 .qcard{
   background:var(--card);border:1px solid var(--line);border-radius:12px;
@@ -319,14 +252,6 @@ body{
   display:flex;align-items:center;justify-content:center;
 }
 .edit-btn:active{transform:scale(0.93);}
-.note-toggle-btn.active{background:#fff4e0;border-color:var(--amber);}
-.q-note-wrap{margin-top:10px;}
-.q-note-input{
-  width:100%; border:1.5px dashed var(--amber); border-radius:10px; padding:9px 11px;
-  font-size:13px; font-family:'Hind Siliguri',sans-serif; color:var(--ink); background:#fffaf0;
-  resize:vertical; min-height:50px; box-sizing:border-box;
-}
-body.dark-mode .q-note-input{background:#2a2617;}
 .edit-card{border-color:var(--amber);}
 .edit-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
 .edit-icon-row{display:flex;gap:10px;}
@@ -473,7 +398,6 @@ body.dark-mode .q-note-input{background:#2a2617;}
 .tab-btn{flex:1;padding:9px;border:none;background:transparent;border-radius:9px;font-family:'Hind Siliguri';font-weight:600;font-size:13.5px;cursor:pointer;color:var(--moss);}
 .tab-btn.active{background:var(--card);color:var(--forest);box-shadow:0 1px 3px rgba(0,0,0,.08);}
 .ai-badge{font-family:'JetBrains Mono';font-size:10px;background:#e5f0e8;color:var(--leaf-deep);padding:2px 7px;border-radius:20px;margin-right:6px;}
-.hard-badge{background:#fbe9e5!important;color:var(--rust-deep)!important;}
 
 .empty{text-align:center;padding:44px 24px;color:var(--moss);}
 .empty .big{
@@ -716,7 +640,7 @@ let PROGRESS = {}; // unitId -> {seen:{}, correct:{}, exams:[]}
 let EDITS = {}; // unitId -> { mcq: {key: {question,options,explanation,correct}} }
 let MIXED_EXAMS = []; // array of {date, unitIds:[], score, total, took}
 let storageReady = false;
-const LS_KEYS = {progress:'bioapp_progress', custom:'bioapp_custom', edits:'bioapp_edits', mixed:'bioapp_mixed_exams', settings:'bioapp_settings', favorites:'bioapp_favorites', excluded:'bioapp_excluded', streak:'bioapp_streak', notes:'bioapp_notes', points:'bioapp_points', badges:'bioapp_badges', onboarded:'bioapp_onboarded'};
+const LS_KEYS = {progress:'bioapp_progress', custom:'bioapp_custom', edits:'bioapp_edits', mixed:'bioapp_mixed_exams', settings:'bioapp_settings', favorites:'bioapp_favorites', excluded:'bioapp_excluded', streak:'bioapp_streak'};
 let SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false, fontSize:'normal', reminderOn:false, reminderTime:'20:00', soundEnabled: true};
 let FAVORITES = new Set(); // set of "uid:key" strings
 
@@ -740,9 +664,6 @@ function storageAvailable(){
 let STORAGE_OK = true;
 
 let STREAK = {count:0, lastDate:null};
-let NOTES = {}; // "uid:key" -> note text
-let POINTS = 0;
-let BADGES = []; // array of unlocked badge ids
 async function loadStorage(){
   STORAGE_OK = storageAvailable();
   PROGRESS = lsGet(LS_KEYS.progress);
@@ -752,10 +673,6 @@ async function loadStorage(){
   MIXED_EXAMS = lsGetArr(LS_KEYS.mixed);
   STREAK = lsGet(LS_KEYS.streak);
   if(!STREAK || typeof STREAK.count !== 'number') STREAK = {count:0, lastDate:null};
-  NOTES = lsGet(LS_KEYS.notes) || {};
-  POINTS = lsGet(LS_KEYS.points) || 0;
-  if(typeof POINTS !== 'number') POINTS = 0;
-  BADGES = lsGetArr(LS_KEYS.badges);
   const s = lsGet(LS_KEYS.settings);
   SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false, fontSize:'normal', reminderOn:false, reminderTime:'20:00', soundEnabled: true, ...s};
   document.body.classList.toggle('dark-mode', !!SETTINGS.darkMode);
@@ -810,8 +727,6 @@ async function bumpStreak(){
   }
   STREAK.lastDate = today;
   lsSet(LS_KEYS.streak, STREAK);
-  await addPoints(5);
-  await checkBadges();
 }
 function syncThemeColor(){
   const m = document.getElementById('meta-theme-color');
@@ -821,172 +736,6 @@ async function saveProgress(){ lsSet(LS_KEYS.progress, PROGRESS); }
 async function saveCustom(){ lsSet(LS_KEYS.custom, CUSTOM_Q); }
 async function saveEdits(){ lsSet(LS_KEYS.edits, EDITS); }
 async function saveExcluded(){ lsSet(LS_KEYS.excluded, EXCLUDED_Q); }
-async function saveNotes(){ lsSet(LS_KEYS.notes, NOTES); }
-
-/* ================= POINTS & LEVELS ================= */
-function levelFromPoints(pts){
-  let level = 1, threshold = 0, step = 60;
-  while(pts >= threshold + step){
-    threshold += step;
-    level++;
-    step = Math.round(step * 1.18);
-  }
-  return {level, into: pts-threshold, need: step};
-}
-async function addPoints(n){
-  const before = levelFromPoints(POINTS).level;
-  POINTS += n;
-  lsSet(LS_KEYS.points, POINTS);
-  const after = levelFromPoints(POINTS).level;
-  if(after > before) setTimeout(()=> showLevelUpToast(after), 500);
-}
-function showLevelUpToast(level){
-  const overlay = document.createElement('div');
-  overlay.className = 'cm-overlay';
-  overlay.innerHTML = `
-    <div class="cm-box" style="text-align:center;">
-      <div class="levelup-icon">🎖️</div>
-      <div class="cm-msg" style="font-weight:800;font-size:19px;margin-bottom:4px;">লেভেল আপ!</div>
-      <div class="cm-msg" style="margin-bottom:18px;">তুমি এখন লেভেল ${level}</div>
-      <div class="cm-actions cm-single"><button class="cm-btn cm-ok" id="lu-ok">চালিয়ে যাও</button></div>
-    </div>`;
-  document.body.appendChild(overlay);
-  requestAnimationFrame(()=>overlay.classList.add('show'));
-  const close = ()=>{ overlay.classList.remove('show'); setTimeout(()=>overlay.remove(), 180); };
-  overlay.querySelector('#lu-ok').onclick = close;
-  fireConfetti();
-  playCorrectSound();
-}
-
-/* ================= ACHIEVEMENT BADGES ================= */
-function totalAnsweredEver(){
-  let n = 0;
-  UNITS.forEach(u=>{ const p=PROGRESS[u.id]; if(p&&p.seen) n += Object.keys(p.seen).length; });
-  return n;
-}
-function totalExamsEver(){
-  let n = 0;
-  UNITS.forEach(u=>{ const p=PROGRESS[u.id]; if(p&&p.exams) n += p.exams.length; });
-  return n + MIXED_EXAMS.length;
-}
-function hasHadPerfectExam(){
-  let found = false;
-  UNITS.forEach(u=>{ const p=PROGRESS[u.id]; if(p&&p.exams) p.exams.forEach(e=>{ if(e.total>0 && pct(Math.max(0,e.score),e.total)>=100) found=true; }); });
-  MIXED_EXAMS.forEach(e=>{ if(e.total>0 && pct(Math.max(0,e.score),e.total)>=100) found=true; });
-  return found;
-}
-function hasCompletedAnyUnit(){ return UNITS.some(u=> unitStudyPercent(u.id) >= 100); }
-function hasCompletedAllUnits(){ return UNITS.every(u=> unitStudyPercent(u.id) >= 100); }
-function totalCustomQuestions(){ return Object.values(CUSTOM_Q).reduce((s,arr)=>s+(arr?arr.length:0),0); }
-
-const BADGE_DEFS = [
-  {id:'first_answer', icon:'🌱', name:'প্রথম পা', desc:'প্রথমবার কোনো প্রশ্নের উত্তর দিয়েছ', check:()=>totalAnsweredEver()>=1},
-  {id:'hundred_qs', icon:'💯', name:'১০০ প্রশ্নের মাইলফলক', desc:'১০০টি প্রশ্নের উত্তর দিয়েছ', check:()=>totalAnsweredEver()>=100},
-  {id:'five_hundred_qs', icon:'🚀', name:'৫০০ প্রশ্নের মাইলফলক', desc:'৫০০টি প্রশ্নের উত্তর দিয়েছ', check:()=>totalAnsweredEver()>=500},
-  {id:'streak_3', icon:'🔥', name:'৩ দিন ধারাবাহিক', desc:'টানা ৩ দিন পড়েছ', check:()=>STREAK.count>=3},
-  {id:'streak_7', icon:'🔥', name:'৭ দিন ধারাবাহিক', desc:'টানা ৭ দিন পড়েছ', check:()=>STREAK.count>=7},
-  {id:'streak_30', icon:'🌟', name:'৩০ দিন ধারাবাহিক', desc:'টানা ৩০ দিন পড়েছ', check:()=>STREAK.count>=30},
-  {id:'first_exam', icon:'📝', name:'প্রথম পরীক্ষা', desc:'প্রথমবার পরীক্ষা দিয়েছ', check:()=>totalExamsEver()>=1},
-  {id:'ten_exams', icon:'🎯', name:'১০টি পরীক্ষা', desc:'১০টি পরীক্ষা সম্পন্ন করেছ', check:()=>totalExamsEver()>=10},
-  {id:'perfect_exam', icon:'🏆', name:'নিখুঁত স্কোর', desc:'কোনো পরীক্ষায় ১০০% স্কোর করেছ', check:hasHadPerfectExam},
-  {id:'unit_complete', icon:'✅', name:'একটা ইউনিট সম্পন্ন', desc:'কোনো ইউনিটের ১০০% প্রশ্ন পড়েছ', check:hasCompletedAnyUnit},
-  {id:'all_units', icon:'👑', name:'সব ইউনিট সম্পন্ন', desc:'সবগুলো ইউনিট ১০০% পড়েছ', check:hasCompletedAllUnits},
-  {id:'own_question', icon:'✍️', name:'প্রশ্ন লেখক', desc:'নিজের প্রথম MCQ তৈরি করেছ', check:()=>totalCustomQuestions()>=1},
-  {id:'ten_own_questions', icon:'📚', name:'প্রশ্ন সংগ্রাহক', desc:'নিজের ১০টি MCQ তৈরি করেছ', check:()=>totalCustomQuestions()>=10},
-];
-async function checkBadges(){
-  const newly = [];
-  BADGE_DEFS.forEach(b=>{
-    if(!BADGES.includes(b.id) && b.check()){
-      BADGES.push(b.id);
-      newly.push(b);
-    }
-  });
-  if(newly.length){
-    lsSet(LS_KEYS.badges, BADGES);
-    newly.forEach((b,i)=> setTimeout(()=> showBadgeUnlockToast(b), i*1700));
-  }
-}
-function showBadgeUnlockToast(badge){
-  const overlay = document.createElement('div');
-  overlay.className = 'cm-overlay';
-  overlay.innerHTML = `
-    <div class="cm-box" style="text-align:center;">
-      <div class="levelup-icon">${badge.icon}</div>
-      <div class="cm-msg" style="font-weight:800;font-size:17px;margin-bottom:4px;">নতুন অর্জন আনলক!</div>
-      <div class="cm-msg" style="font-weight:700;color:var(--forest);margin-bottom:2px;">${esc(badge.name)}</div>
-      <div class="cm-msg" style="font-size:12.5px;color:var(--moss);margin-bottom:18px;">${esc(badge.desc)}</div>
-      <div class="cm-actions cm-single"><button class="cm-btn cm-ok" id="bu-ok">দারুণ!</button></div>
-    </div>`;
-  document.body.appendChild(overlay);
-  requestAnimationFrame(()=>overlay.classList.add('show'));
-  const close = ()=>{ overlay.classList.remove('show'); setTimeout(()=>overlay.remove(), 180); };
-  overlay.querySelector('#bu-ok').onclick = close;
-  playCorrectSound();
-}
-
-/* ================= ONBOARDING (first-time guide) ================= */
-const ONBOARD_STEPS = [
-  {icon:'🌿', title:'স্বাগতম!', body:'শিক্ষক নিবন্ধন জীববিজ্ঞান প্র্যাকটিসে তোমাকে স্বাগতম। ১০টি ইউনিট, হাজারো MCQ আর বাংলা ব্যাখ্যা নিয়ে তৈরি — চলো ঝটপট দেখে নিই কীভাবে ব্যবহার করবে।'},
-  {icon:'📖', title:'ইউনিট বেছে পড়ো', body:'হোম থেকে "ইউনিটসমূহ"-এ গিয়ে যেকোনো ইউনিটে ঢোকো। সেখানে ৪ রকম মোড পাবে — পড়া, ফ্ল্যাশকার্ড, কুইক প্র্যাকটিস, আর টাইমড পরীক্ষা।'},
-  {icon:'🃏', title:'ফ্ল্যাশকার্ড ও কুইক প্র্যাকটিস', body:'ফ্ল্যাশকার্ডে কার্ড সোয়াইপ করে ঝটপট রিভিশন দাও। মাত্র ৫ মিনিট সময় থাকলে "কুইক প্র্যাকটিস" মোডে ঢুকে পড়ো — যেগুলো ভুল করো সেগুলো বেশি আসবে।'},
-  {icon:'🎖️', title:'পয়েন্ট, লেভেল ও অর্জন', body:'পড়তে থাকলে পয়েন্ট জমবে, লেভেল বাড়বে, আর নতুন নতুন অর্জন আনলক হবে। প্রতিদিন পড়লে ধারাবাহিকতা (streak)-ও বাড়তে থাকবে।'},
-  {icon:'✍️', title:'নিজের প্রশ্ন যোগ করো', body:'যেকোনো ইউনিটে নিজের MCQ লিখে যোগ করতে পারো — এমনকি অন্য কোথাও থেকে কপি করা প্রশ্ন পেস্ট করলেও এটা নিজে থেকে প্রশ্ন-অপশন আলাদা করে বসিয়ে দেবে।'},
-  {icon:'🚀', title:'প্রস্তুত?', body:'এখন থেকেই শুরু করে দাও। যেকোনো সময় উপরের ⚙️ আইকনে গিয়ে সেটিংস (ডার্ক মোড, ফন্ট সাইজ, রিমাইন্ডার, ব্যাকআপ) পাবে। শুভকামনা!'},
-];
-function showOnboarding(){
-  let step = 0;
-  const overlay = document.createElement('div');
-  overlay.className = 'cm-overlay';
-  document.body.appendChild(overlay);
-  requestAnimationFrame(()=>overlay.classList.add('show'));
-
-  function renderStep(){
-    const s = ONBOARD_STEPS[step];
-    overlay.innerHTML = `
-      <div class="cm-box onboard-box">
-        <div class="onboard-icon">${s.icon}</div>
-        <div class="onboard-title">${esc(s.title)}</div>
-        <div class="onboard-body">${esc(s.body)}</div>
-        <div class="onboard-dots">
-          ${ONBOARD_STEPS.map((_,i)=>`<span class="onboard-dot ${i===step?'active':''}"></span>`).join('')}
-        </div>
-        <div class="cm-actions">
-          ${step<ONBOARD_STEPS.length-1? `<button class="cm-btn cm-cancel" id="ob-skip">এড়িয়ে যাও</button>`:''}
-          <button class="cm-btn cm-ok" id="ob-next">${step<ONBOARD_STEPS.length-1?'পরবর্তী':'শুরু করি!'}</button>
-        </div>
-      </div>`;
-    const skipBtn = overlay.querySelector('#ob-skip');
-    if(skipBtn) skipBtn.onclick = finish;
-    overlay.querySelector('#ob-next').onclick = ()=>{
-      if(step < ONBOARD_STEPS.length-1){ step++; renderStep(); }
-      else finish();
-    };
-  }
-  function finish(){
-    localStorage.setItem(LS_KEYS.onboarded, '1');
-    overlay.classList.remove('show');
-    setTimeout(()=>overlay.remove(), 180);
-  }
-  renderStep();
-}
-
-function achievementsHTML(){
-  const unlockedCount = BADGES.length;
-  return `
-    <div class="section-label">${unlockedCount}/${BADGE_DEFS.length} অর্জন আনলক হয়েছে</div>
-    <div class="badge-grid">
-      ${BADGE_DEFS.map(b=>{
-        const unlocked = BADGES.includes(b.id);
-        return `<div class="badge-card ${unlocked?'unlocked':'locked'}">
-          <div class="badge-icon">${unlocked? b.icon : '🔒'}</div>
-          <div class="badge-name">${esc(b.name)}</div>
-          <div class="badge-desc">${esc(b.desc)}</div>
-        </div>`;
-      }).join('')}
-    </div>
-  `;
-}
 async function saveMixedExams(){ lsSet(LS_KEYS.mixed, MIXED_EXAMS); }
 async function saveSettings(){ lsSet(LS_KEYS.settings, SETTINGS); }
 async function saveFavorites(){ lsSet(LS_KEYS.favorites, Array.from(FAVORITES)); }
@@ -1389,10 +1138,6 @@ function showAppSettingsModal(){
         </div>
       </div>
 
-      <div class="settings-block">
-        <button class="big-btn ghost" id="btn-replay-guide" style="width:100%;">📘 ব্যবহারের গাইড আবার দেখো</button>
-      </div>
-
       <div class="cm-actions" style="margin-top:16px;">
         <button class="cm-btn cm-ok" id="as-close">বন্ধ করো</button>
       </div>
@@ -1456,7 +1201,6 @@ function showAppSettingsModal(){
 
   overlay.querySelector('#btn-backup').onclick = ()=>{ close(); setTimeout(showBackupModal, 200); };
   overlay.querySelector('#btn-restore').onclick = ()=>{ close(); setTimeout(showRestoreModal, 200); };
-  overlay.querySelector('#btn-replay-guide').onclick = ()=>{ close(); setTimeout(showOnboarding, 200); };
 }
 
 function nav(view, extra={}){
@@ -1484,9 +1228,6 @@ function goBack(){
       performGoBack();
     }, {danger:true, okLabel:'বন্ধ করো'});
     return;
-  }
-  if(state.view==='quickPractice' && !state.quickFinished){
-    clearInterval(state.quickTimer);
   }
   performGoBack();
 }
@@ -1652,10 +1393,6 @@ function topbarHTML(){
     title = 'ফেভারিট প্রশ্ন'; sub = 'তোমার পছন্দ করা প্রশ্নগুলো';
   }else if(state.view==='mistakes'||state.view==='mistakesExamConfig'){
     title = 'ভুল হওয়া প্রশ্ন'; sub = 'যেসব প্রশ্নে এখনো ভুল করছো';
-  }else if(state.view==='flashcard'){
-    title = 'ফ্ল্যাশকার্ড'; sub = 'সোয়াইপ করে করে রিভিশন দাও';
-  }else if(state.view==='quickPractice'){
-    title = '৫ মিনিট কুইক প্র্যাকটিস'; sub = 'ঝটপট কয়েকটা প্রশ্ন';
   }else if((state.view==='examRun'||state.view==='examResult') && state.examMode==='mixed'){
     title = 'মিশ্র পরীক্ষা'; sub = state.examUnitIds.length+'টি ইউনিট থেকে প্রশ্ন';
   }else if((state.view==='examRun'||state.view==='examResult') && state.examMode==='favorites'){
@@ -1713,8 +1450,6 @@ function attachHandlers(){
   if(state.view==='favExamConfig') attachFavExamConfig();
   if(state.view==='mistakes') attachMistakes();
   if(state.view==='mistakesExamConfig') attachMistakesExamConfig();
-  if(state.view==='flashcard') attachFlashcard();
-  if(state.view==='quickPractice') attachQuickPractice();
 }
 
 /* ================= Router ================= */
@@ -1733,8 +1468,6 @@ function viewHTML(){
   if(state.view==='favExamConfig') return favExamConfigHTML();
   if(state.view==='mistakes') return mistakesHTML();
   if(state.view==='mistakesExamConfig') return mistakesExamConfigHTML();
-  if(state.view==='flashcard') return flashcardHTML();
-  if(state.view==='quickPractice') return quickPracticeHTML();
   return '';
 }
 
@@ -1827,11 +1560,6 @@ function homeHTML(){
   ${!STORAGE_OK? `<div style="background:#fbe9e5;border:1px solid var(--rust);border-radius:14px;padding:12px 16px;margin-bottom:16px;font-size:12.5px;color:var(--rust-deep);line-height:1.6;">⚠️ এই ব্রাউজারে সংরক্ষণ (storage) চালু করা যায়নি, তাই তোমার পড়া/এডিট/পরীক্ষার ফলাফল সেভ হবে না।</div>`:''}
   <div class="hero hero-compact">
     <div class="hero-compact-tag">১০টি ইউনিট • ${totalQ}+ MCQ • বাংলা ব্যাখ্যাসহ</div>
-    <div class="level-row">
-      <span class="level-badge font-mono">🎖️ লেভেল ${levelFromPoints(POINTS).level}</span>
-      <div class="level-track"><div class="level-fill" style="width:${Math.round(100*levelFromPoints(POINTS).into/levelFromPoints(POINTS).need)}%;"></div></div>
-      <span class="level-pts font-mono">${POINTS} pt</span>
-    </div>
     <div class="stat-row">
       <div class="stat"><b>${totalQ}</b><span>মোট প্রশ্ন</span></div>
       <div class="stat"><b>${totalExams}</b><span>পরীক্ষা</span></div>
@@ -1971,16 +1699,6 @@ function unitHTML(){
       <h4>টাইমড পরীক্ষা</h4>
       <p>সময় বেঁধে পরীক্ষা দাও, শেষে স্কোর ও রিভিউ পাবে</p>
     </button>
-    <button class="mode-card" id="btn-flashcard">
-      <div class="icon" style="background:#fdeef5;color:#c94d6d;">🃏</div>
-      <h4>ফ্ল্যাশকার্ড</h4>
-      <p>কার্ড সোয়াইপ করে করে ঝটপট রিভিশন — জানলে ডানে, না জানলে বামে</p>
-    </button>
-    <button class="mode-card" id="btn-quick">
-      <div class="icon" style="background:#fff4e0;color:#c98a3d;">⚡</div>
-      <h4>৫ মিনিট কুইক প্র্যাকটিস</h4>
-      <p>অল্প সময়ে কয়েকটা এলোমেলো প্রশ্ন, তাৎক্ষণিক উত্তরসহ</p>
-    </button>
     <button class="mode-card full" id="btn-custom">
       <div class="icon" style="background:#eef0fb;color:#4a4fb0;">${ICO.plus}</div>
       <div><h4>নিজের প্রশ্ন যোগ করো</h4><p>নিজে লিখে MCQ তৈরি করো, এই ইউনিটে যুক্ত হবে${customCount? ' ('+customCount+'টি আছে)':''}</p></div>
@@ -1991,8 +1709,6 @@ function unitHTML(){
 function attachUnit(){
   document.getElementById('btn-study').onclick = ()=> { state.sessionTally = {correct:0, wrong:0}; state.sessionSeen = {}; nav('study',{unitId:state.unitId, studyPage:1}); };
   document.getElementById('btn-exam').onclick = ()=> nav('examConfig',{unitId:state.unitId});
-  document.getElementById('btn-flashcard').onclick = ()=> startFlashcards(state.unitId);
-  document.getElementById('btn-quick').onclick = ()=> startQuickPractice(state.unitId);
   document.getElementById('btn-custom').onclick = ()=> nav('custom',{unitId:state.unitId});
   const r = document.getElementById('btn-reset-progress');
   if(r) r.onclick = ()=>{
@@ -2002,226 +1718,6 @@ function attachUnit(){
       await saveProgress();
       render();
     }, {danger:true, okLabel:'মুছে ফেলো'});
-  };
-}
-
-/* ================= QUICK PRACTICE (5-minute burst) ================= */
-function weightedShuffle(pool, uid){
-  const prog = ensureUnitProgress(uid);
-  const weighted = [];
-  pool.forEach(q=>{
-    const seen = prog.seen && prog.seen[q._key]!==undefined;
-    const correct = prog.correct && prog.correct[q._key];
-    let weight = 1;
-    if(seen && !correct) weight = 4;      // previously wrong -> shown much more often
-    else if(!seen) weight = 2;            // never tried -> shown more often
-    for(let i=0;i<weight;i++) weighted.push(q);
-  });
-  const shuffled = shuffle(weighted);
-  const seenKeys = new Set();
-  const result = [];
-  for(const q of shuffled){
-    if(!seenKeys.has(q._key)){ seenKeys.add(q._key); result.push(q); }
-  }
-  return result;
-}
-function startQuickPractice(uid){
-  const pool = weightedShuffle(allQuestionsFor(uid), uid);
-  if(!pool.length){ showAlert('এই ইউনিটে এখনো কোনো প্রশ্ন নেই।'); return; }
-  state.quickUnitId = uid;
-  state.quickQueue = pool;
-  state.quickIndex = 0;
-  state.quickScore = 0;
-  state.quickAnswered = false;
-  state.quickSelected = null;
-  state.quickFinished = false;
-  state.quickSecondsLeft = 300;
-  state.quickTotalSeconds = 300;
-  nav('quickPractice', {unitId: uid});
-  startQuickTimer();
-}
-function startQuickTimer(){
-  clearInterval(state.quickTimer);
-  state.quickTimer = setInterval(()=>{
-    state.quickSecondsLeft--;
-    if(state.quickSecondsLeft<=0){
-      clearInterval(state.quickTimer);
-      finishQuickPractice();
-      return;
-    }
-    const t = document.getElementById('quick-timer-txt');
-    if(t) t.textContent = fmtTime(state.quickSecondsLeft);
-    const fill = document.getElementById('quick-progress-fill');
-    if(fill) fill.style.width = (100*(1-state.quickSecondsLeft/state.quickTotalSeconds))+'%';
-  }, 1000);
-}
-function finishQuickPractice(){
-  clearInterval(state.quickTimer);
-  state.quickFinished = true;
-  render();
-}
-function quickPracticeHTML(){
-  if(state.quickFinished || state.quickIndex >= (state.quickQueue||[]).length){
-    const total = state.quickIndex;
-    return `<div class="fc-done">
-      <div class="fc-done-emoji">⚡</div>
-      <h3>${state.quickFinished? 'সময় শেষ!' : 'সব প্রশ্ন শেষ!'} ${total}টা প্রশ্নের উত্তর দিয়েছ</h3>
-      <div class="fc-done-stats">
-        <div><b>${state.quickScore}</b><span>সঠিক</span></div>
-        <div><b>${total-state.quickScore}</b><span>ভুল</span></div>
-      </div>
-      <button class="big-btn" id="btn-quick-again" style="margin-top:16px;">আবার শুরু করো</button>
-    </div>`;
-  }
-  const q = state.quickQueue[state.quickIndex];
-  const labels=['ক','খ','গ','ঘ'];
-  const answered = state.quickAnswered;
-  const selected = state.quickSelected;
-  return `
-  <div class="exam-top">
-    <div class="timer">${ICO.clock} <span id="quick-timer-txt">${fmtTime(state.quickSecondsLeft)}</span></div>
-    <div class="progress-track"><div class="progress-fill" id="quick-progress-fill" style="width:${100*(1-state.quickSecondsLeft/state.quickTotalSeconds)}%"></div></div>
-    <div class="qof font-mono">✓${state.quickScore}</div>
-  </div>
-  <div class="qcard">
-    <span class="qnum font-mono">প্রশ্ন ${state.quickIndex+1}</span>
-    <div class="qtext">${esc(q.question)}</div>
-    <div class="opts">
-    ${q.options.map((opt,oi)=>{
-      let cls='opt-btn';
-      if(answered){
-        if(oi===q.correct) cls+=' correct';
-        else if(oi===selected) cls+=' wrong';
-        else cls+=' dim';
-      }
-      return `<div class="opt-row"><button class="${cls}" data-oi="${oi}"><span class="lbl">${labels[oi]}</span> ${esc(opt)}</button></div>`;
-    }).join('')}
-    </div>
-    ${answered? `<div class="explain"><b>ব্যাখ্যা:</b> ${esc(q.explanation||'কোনো ব্যাখ্যা দেওয়া নেই।')}</div>`:''}
-  </div>
-  `;
-}
-function attachQuickPractice(){
-  if(state.quickFinished || state.quickIndex >= (state.quickQueue||[]).length){
-    const btn = document.getElementById('btn-quick-again');
-    if(btn) btn.onclick = ()=> startQuickPractice(state.quickUnitId);
-    return;
-  }
-  document.querySelectorAll('.opt-btn').forEach(btn=>{
-    btn.onclick = async ()=>{
-      if(state.quickAnswered) return;
-      const oi = Number(btn.dataset.oi);
-      const q = state.quickQueue[state.quickIndex];
-      state.quickAnswered = true;
-      state.quickSelected = oi;
-      const prog = ensureUnitProgress(q.unitId || state.quickUnitId);
-      prog.seen[q._key] = oi;
-      if(oi===q.correct){ state.quickScore++; playCorrectSound(); prog.correct[q._key]=true; await addPoints(2); }
-      else { playWrongSound(); delete prog.correct[q._key]; }
-      await saveProgress();
-      await bumpStreak();
-      await checkBadges();
-      render();
-      setTimeout(()=>{
-        if(state.quickFinished) return; // timer may have ended during the pause
-        state.quickIndex++;
-        state.quickAnswered = false;
-        state.quickSelected = null;
-        if(state.quickIndex >= state.quickQueue.length) finishQuickPractice();
-        else render();
-      }, 1100);
-    };
-  });
-}
-
-/* ================= FLASHCARDS (swipe mode) ================= */
-function startFlashcards(uid){
-  const pool = shuffle(allQuestionsFor(uid));
-  if(!pool.length){ showAlert('এই ইউনিটে এখনো কোনো প্রশ্ন নেই।'); return; }
-  state.flashcardUnitId = uid;
-  state.flashcardQueue = pool;
-  state.flashcardIndex = 0;
-  state.flashcardFlipped = false;
-  state.flashcardResults = {know:0, dontknow:0};
-  nav('flashcard', {unitId: uid});
-}
-function flashcardHTML(){
-  const uid = state.flashcardUnitId;
-  const queue = state.flashcardQueue || [];
-  const i = state.flashcardIndex || 0;
-  const u = UNITS.find(x=>x.id===uid);
-  if(i >= queue.length){
-    const r = state.flashcardResults || {know:0, dontknow:0};
-    return `<div class="fc-done">
-      <div class="fc-done-emoji">🎉</div>
-      <h3>শেষ! ${queue.length}টা কার্ড দেখা হয়ে গেছে</h3>
-      <div class="fc-done-stats">
-        <div><b>${r.know}</b><span>জানো</span></div>
-        <div><b>${r.dontknow}</b><span>আবার দেখতে হবে</span></div>
-      </div>
-      <div class="row" style="display:flex;gap:8px;margin-top:16px;">
-        <button class="big-btn ghost" id="btn-fc-restart" style="flex:1;">আবার শুরু করো</button>
-        ${r.dontknow? `<button class="big-btn" id="btn-fc-redo-wrong" style="flex:1;">শুধু না-জানাগুলো</button>`:''}
-      </div>
-    </div>`;
-  }
-  const q = queue[i];
-  const flipped = state.flashcardFlipped;
-  const theme = unitTheme(uid);
-  return `
-    <div class="fc-progress">
-      <div class="fc-progress-track"><div class="fc-progress-fill" style="width:${100*i/queue.length}%;background:${theme.color};"></div></div>
-      <span class="font-mono">${i+1}/${queue.length}</span>
-    </div>
-    <div class="flashcard-stage">
-      <div class="flashcard ${flipped?'flipped':''}" id="flashcard-el">
-        <div class="fc-face fc-front">
-          <div class="fc-tag" style="background:${theme.color}20;">${theme.icon} ${esc(u.name)}</div>
-          <div class="fc-question">${esc(q.question)}</div>
-          <div class="fc-hint">ট্যাপ করে উত্তর দেখো</div>
-        </div>
-        <div class="fc-face fc-back">
-          <div class="fc-tag good">✓ সঠিক উত্তর</div>
-          <div class="fc-answer">${esc(q.options[q.correct])}</div>
-          ${q.explanation? `<div class="fc-explain">${esc(q.explanation)}</div>`:''}
-        </div>
-      </div>
-    </div>
-    <div class="fc-actions">
-      <button class="fc-btn fc-no" id="btn-fc-dontknow">✗ জানি না</button>
-      <button class="fc-btn fc-yes" id="btn-fc-know">✓ জানি</button>
-    </div>
-    <div class="fc-swipe-hint">← সোয়াইপ করে বাদ দাও, বা ডানে সোয়াইপ করে জানো বলো →</div>
-  `;
-}
-async function fcAdvance(knew){
-  const r = state.flashcardResults || {know:0, dontknow:0};
-  if(knew) r.know++; else r.dontknow++;
-  state.flashcardResults = r;
-  state.flashcardIndex = (state.flashcardIndex||0) + 1;
-  state.flashcardFlipped = false;
-  await addPoints(1);
-  await bumpStreak();
-  render();
-}
-function attachFlashcard(){
-  const card = document.getElementById('flashcard-el');
-  if(card){
-    card.onclick = ()=>{ state.flashcardFlipped = !state.flashcardFlipped; render(); };
-    attachSwipeNav(card,
-      ()=> fcAdvance(false), // swipe right-to-left -> "don't know"
-      ()=> fcAdvance(true)   // swipe left-to-right -> "know"
-    );
-  }
-  const knowBtn = document.getElementById('btn-fc-know');
-  if(knowBtn) knowBtn.onclick = (e)=>{ e.stopPropagation(); fcAdvance(true); };
-  const dontKnowBtn = document.getElementById('btn-fc-dontknow');
-  if(dontKnowBtn) dontKnowBtn.onclick = (e)=>{ e.stopPropagation(); fcAdvance(false); };
-  const restartBtn = document.getElementById('btn-fc-restart');
-  if(restartBtn) restartBtn.onclick = ()=> startFlashcards(state.flashcardUnitId);
-  const redoBtn = document.getElementById('btn-fc-redo-wrong');
-  if(redoBtn) redoBtn.onclick = ()=>{
-    startFlashcards(state.flashcardUnitId);
   };
 }
 
@@ -2271,15 +1767,11 @@ function studyHTML(){
       if(state.editOpen.has(q._key)) return editFormHTML(q, idx);
       const answered = state.sessionSeen && state.sessionSeen[q._key]!==undefined;
       const selected = answered? state.sessionSeen[q._key] : null;
-      const noteKey = u.id+':'+q._key;
-      const noteText = NOTES[noteKey] || '';
-      const isHardForYou = prog.seen && prog.seen[q._key]!==undefined && !prog.correct[q._key];
       return `<div class="qcard" data-key="${q._key}">
         <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span class="qnum font-mono">প্রশ্ন ${idx+1}${q.source==='custom'?' <span class="ai-badge" style="margin-right:0;margin-left:6px;">নিজের</span>':''}${q.edited?' <span class="ai-badge" style="background:#fbf0dd;color:var(--amber-deep);margin-right:0;margin-left:6px;">এডিট করা</span>':''}${isHardForYou?' <span class="ai-badge hard-badge" style="margin-right:0;margin-left:6px;">তোমার জন্য কঠিন</span>':''}</span>
+          <span class="qnum font-mono">প্রশ্ন ${idx+1}${q.source==='custom'?' <span class="ai-badge" style="margin-right:0;margin-left:6px;">নিজের</span>':''}${q.edited?' <span class="ai-badge" style="background:#fbf0dd;color:var(--amber-deep);margin-right:0;margin-left:6px;">এডিট করা</span>':''}</span>
           <div style="display:flex;gap:5px;">
             <button class="edit-btn fav-btn ${isFavorite(u.id,q._key)?'active':''}" data-uid="${u.id}" data-key="${q._key}" title="ফেভারিটে যোগ করো">${isFavorite(u.id,q._key)?ICO.heartFill:ICO.heart}</button>
-            <button class="edit-btn note-toggle-btn ${noteText?'active':''}" data-notekey="${noteKey}" title="নোট">📝</button>
             <button class="edit-btn" data-key="${q._key}" title="এডিট করো">${ICO.edit}</button>
           </div>
         </div>
@@ -2296,9 +1788,6 @@ function studyHTML(){
         }).join('')}
         </div>
         ${answered? `<div class="explain"><b>ব্যাখ্যা:</b> ${esc(q.explanation||'কোনো ব্যাখ্যা দেওয়া নেই।')}</div>`:''}
-        <div class="q-note-wrap" data-notekey="${noteKey}" style="${noteText?'':'display:none;'}">
-          <textarea class="q-note-input" data-notekey="${noteKey}" placeholder="এখানে নিজের নোট লেখো...">${esc(noteText)}</textarea>
-        </div>
       </div>`;
     }).join('')}
     ${sessionTallyHTML()}
@@ -2331,37 +1820,6 @@ function editFormHTML(q, idx){
 }
 function attachStudy(){
   const u = UNITS.find(x=>x.id===state.unitId);
-
-  document.querySelectorAll('.note-toggle-btn').forEach(btn=>{
-    btn.onclick = (e)=>{
-      e.stopPropagation();
-      const key = btn.dataset.notekey;
-      const wrap = document.querySelector(`.q-note-wrap[data-notekey="${CSS.escape(key)}"]`);
-      if(wrap){
-        const showing = wrap.style.display !== 'none';
-        wrap.style.display = showing ? 'none' : 'block';
-        if(!showing){
-          const ta = wrap.querySelector('textarea');
-          if(ta) ta.focus();
-        }
-      }
-    };
-  });
-  document.querySelectorAll('.q-note-input').forEach(ta=>{
-    let saveTimer = null;
-    ta.oninput = ()=>{
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(async ()=>{
-        const key = ta.dataset.notekey;
-        const val = ta.value;
-        if(val.trim()) NOTES[key] = val; else delete NOTES[key];
-        await saveNotes();
-        const btn = document.querySelector(`.note-toggle-btn[data-notekey="${CSS.escape(key)}"]`);
-        if(btn) btn.classList.toggle('active', !!val.trim());
-      }, 500);
-    };
-  });
-
   const settingsBtn = document.getElementById('study-settings-btn');
   const settingsPanel = document.getElementById('study-settings-panel');
   if(settingsBtn && settingsPanel){
@@ -2438,8 +1896,6 @@ function attachStudy(){
         state.pendingAnswerKey[u.id] = key;
         await saveProgress();
         await bumpStreak();
-        if(oi===q.correct) await addPoints(2);
-        await checkBadges();
         const scrollY = window.scrollY;
         render();
         window.scrollTo({top:scrollY, behavior:'instant'});
@@ -2660,8 +2116,6 @@ async function finishExam(){
     }
   });
   await saveProgress();
-  await addPoints(10 + correctCount*1);
-  await checkBadges();
   state.examResult = {score, total: qs.length, took, review, correctCount, wrongCount, skipped};
   // Clear the nav stack so pressing back from the result screen goes straight
   // home, instead of re-entering the exam that's already finished.
@@ -2741,10 +2195,7 @@ function examResultHTML(){
     </div>
   </div>
   ${perUnitHTML}
-  <div class="row" style="display:flex;gap:8px;margin:16px 0 18px;">
-    <button class="big-btn ghost" id="btn-share-card" style="flex:1;">📤 শেয়ার করো</button>
-    <button class="big-btn" id="btn-retry" style="flex:1;margin:0;">আরেকটি পরীক্ষা দাও</button>
-  </div>
+  <button class="big-btn" id="btn-retry" style="margin:16px 0 18px;">আরেকটি পরীক্ষা দাও</button>
   <div class="section-label">ভুল উত্তরগুলো রিভিউ করো</div>
   ${r.review.filter(x=>!x.ok).length===0? `<div class="empty"><div class="big">🎉</div>সব ঠিক করেছো!</div>` :
   r.review.filter(x=>!x.ok).map(x=>{
@@ -2758,136 +2209,6 @@ function examResultHTML(){
   }).join('')}
   `;
 }
-async function generateScoreCardCanvas(){
-  const r = state.examResult;
-  const W = 1080, H = 1350;
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-
-  // background gradient
-  const grad = ctx.createLinearGradient(0,0,W,H);
-  grad.addColorStop(0, '#1f4d3a');
-  grad.addColorStop(1, '#2c6a4e');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0,0,W,H);
-
-  // decorative circle
-  ctx.beginPath();
-  ctx.arc(W-60, 60, 220, 0, Math.PI*2);
-  ctx.fillStyle = 'rgba(255,255,255,0.06)';
-  ctx.fill();
-
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#cfe3d3';
-  ctx.font = '32px sans-serif';
-  ctx.fillText('শিক্ষক নিবন্ধন জীববিজ্ঞান প্র্যাকটিস', W/2, 110);
-
-  // score donut
-  const p = pct(Math.max(0,r.score), r.total);
-  const cx = W/2, cy = 430, R = 200;
-  ctx.lineWidth = 34;
-  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-  ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
-  ctx.strokeStyle = '#4ade80';
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.arc(cx,cy,R, -Math.PI/2, -Math.PI/2 + (p/100)*Math.PI*2);
-  ctx.stroke();
-
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 130px sans-serif';
-  ctx.fillText(fmtScore(r.score), cx, cy+45);
-  ctx.font = '34px sans-serif';
-  ctx.fillStyle = '#cfe3d3';
-  ctx.fillText('/ '+r.total, cx, cy+100);
-
-  // headline
-  const msg = p>=80? 'চমৎকার! দারুণ প্রস্তুতি' : p>=50? 'ভালো করেছো' : 'আরেকটু চর্চা দরকার';
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 46px sans-serif';
-  ctx.fillText(msg, W/2, 720);
-
-  // stats row
-  const statY = 830;
-  const stats = [
-    {label:'সঠিক', val:r.correctCount, color:'#4ade80'},
-    {label:'ভুল', val:r.wrongCount, color:'#f0a08a'},
-    {label:'বাদ', val:r.skipped, color:'#c9c2ae'},
-  ];
-  const gap = W/3;
-  stats.forEach((s,i)=>{
-    const x = gap*i + gap/2;
-    ctx.fillStyle = s.color;
-    ctx.font = 'bold 64px sans-serif';
-    ctx.fillText(String(s.val), x, statY);
-    ctx.fillStyle = '#cfe3d3';
-    ctx.font = '28px sans-serif';
-    ctx.fillText(s.label, x, statY+46);
-  });
-
-  // divider
-  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(120, 950); ctx.lineTo(W-120, 950); ctx.stroke();
-
-  // date + level
-  const dateStr = new Date().toLocaleDateString('bn-BD', {year:'numeric', month:'long', day:'numeric'});
-  ctx.fillStyle = '#cfe3d3';
-  ctx.font = '30px sans-serif';
-  ctx.fillText(dateStr, W/2, 1010);
-  ctx.font = '30px sans-serif';
-  ctx.fillText('🎖️ লেভেল ' + levelFromPoints(POINTS).level + '  •  🔥 ' + STREAK.count + ' দিন ধারাবাহিক', W/2, 1060);
-
-  // footer credit
-  ctx.fillStyle = 'rgba(255,255,255,0.55)';
-  ctx.font = '26px sans-serif';
-  ctx.fillText('তৈরি করেছেন Shahriar Sumrat', W/2, H-50);
-
-  return canvas;
-}
-async function shareScoreCard(){
-  const btn = document.getElementById('btn-share-card');
-  if(btn){ btn.textContent = 'তৈরি হচ্ছে...'; btn.disabled = true; }
-  try{
-    const canvas = await generateScoreCardCanvas();
-    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-    if(!blob) throw new Error('canvas blob failed');
-    const filename = `score-card-${todayStr()}.png`;
-    const file = new File([blob], filename, {type:'image/png'});
-
-    if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
-      await navigator.share({files:[file], title:'আমার স্কোর', text:'জীববিজ্ঞান প্র্যাকটিস অ্যাপে আমার স্কোর দেখো!'});
-    } else {
-      // fall back: save via native filesystem
-      const FS = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem;
-      const base64 = await blobToBase64(blob);
-      if(FS){
-        const res = await FS.writeFile({ path: filename, data: base64, directory: 'DOCUMENTS' });
-        showAlert('স্কোরকার্ড সেভ হয়েছে:\n' + (res && res.uri ? res.uri : filename));
-      } else {
-        // plain browser fallback
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = filename;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        setTimeout(()=>URL.revokeObjectURL(url), 2000);
-      }
-    }
-  }catch(e){
-    showAlert('স্কোরকার্ড তৈরি বা শেয়ার করা যায়নি।');
-  } finally {
-    if(btn){ btn.textContent = '📤 শেয়ার করো'; btn.disabled = false; }
-  }
-}
-function blobToBase64(blob){
-  return new Promise((resolve, reject)=>{
-    const reader = new FileReader();
-    reader.onloadend = ()=> resolve(reader.result.split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
 function attachExamResult(){
   document.getElementById('btn-retry').onclick = ()=>{
     if(state.examMode==='mixed') nav('examBuilder',{unitId:null});
@@ -2895,8 +2216,6 @@ function attachExamResult(){
     else if(state.examMode==='mistakes') nav('mistakesExamConfig',{unitId:null});
     else nav('examConfig',{unitId:state.unitId});
   };
-  const shareBtn = document.getElementById('btn-share-card');
-  if(shareBtn) shareBtn.onclick = shareScoreCard;
 
   // animate the donut ring drawing in
   ['donut-seg-correct','donut-seg-wrong','donut-seg-skip'].forEach((id,i)=>{
@@ -2994,54 +2313,8 @@ function progressChartHTML(){
     </div>
   </div>`;
 }
-function masteryRadarHTML(){
-  const N = UNITS.length;
-  const size = 280, cx = size/2, cy = size/2, R = 96;
-  const values = UNITS.map(u=>{
-    const prog = PROGRESS[u.id] || {seen:{},correct:{}};
-    const seenCount = Object.keys(prog.seen||{}).length;
-    const correctCount = Object.keys(prog.correct||{}).length;
-    return seenCount? pct(correctCount, seenCount) : 0;
-  });
-  const angleFor = i => -Math.PI/2 + i*(2*Math.PI/N);
-  const pointAt = (i,val) => {
-    const a = angleFor(i), r = R*(val/100);
-    return [cx + r*Math.cos(a), cy + r*Math.sin(a)];
-  };
-  const polygonPts = values.map((v,i)=> pointAt(i,v).join(',')).join(' ');
-  const axisLines = UNITS.map((u,i)=>{
-    const a = angleFor(i);
-    const x = cx + R*Math.cos(a), y = cy + R*Math.sin(a);
-    return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1"/>`;
-  }).join('');
-  const rings = [25,50,75,100].map(p=>{
-    const pts = UNITS.map((u,i)=>{
-      const a = angleFor(i), r = R*(p/100);
-      return (cx+r*Math.cos(a)).toFixed(1)+','+(cy+r*Math.sin(a)).toFixed(1);
-    }).join(' ');
-    return `<polygon points="${pts}" fill="none" stroke="var(--line)" stroke-width="1" opacity="0.5"/>`;
-  }).join('');
-  const labels = UNITS.map((u,i)=>{
-    const a = angleFor(i), lr = R + 16;
-    const x = cx + lr*Math.cos(a), y = cy + lr*Math.sin(a);
-    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="14" text-anchor="middle" dominant-baseline="middle">${unitTheme(u.id).icon}</text>`;
-  }).join('');
-  return `<div class="radar-card">
-    <svg viewBox="0 0 ${size} ${size}" width="100%" height="${size}">
-      ${rings}${axisLines}
-      <polygon points="${polygonPts}" fill="var(--forest)" fill-opacity="0.28" stroke="var(--forest)" stroke-width="2"/>
-      ${labels}
-    </svg>
-    <div class="radar-hint">প্রতিটা অক্ষ একটা ইউনিটের সঠিক-উত্তরের হার দেখায়</div>
-  </div>`;
-}
 function statsHTML(){
-  return `
-  <div class="section-label">🏆 অর্জন (${BADGES.length}/${BADGE_DEFS.length})</div>
-  ${achievementsHTML()}
-  <div class="section-label">অধ্যায়ভিত্তিক দক্ষতা</div>
-  ${masteryRadarHTML()}
-  ${progressChartHTML()}
+  return `${progressChartHTML()}
   ${MIXED_EXAMS.length? `<div class="section-label">মিশ্র ও ফেভারিট পরীক্ষার ইতিহাস</div>
   ${MIXED_EXAMS.slice().reverse().slice(0,10).map(e=>{
     const p = pct(Math.max(0,e.score), e.total);
@@ -3249,8 +2522,6 @@ function attachCustom(){
     CUSTOM_Q[u.id] = (CUSTOM_Q[u.id]||[]);
     CUSTOM_Q[u.id].push({question, options, correct, explanation});
     await saveCustom();
-    await addPoints(5);
-    await checkBadges();
     render();
   };
   attachEditCards(u.id);
@@ -3457,8 +2728,6 @@ function attachMistakes(){
         if(oi===q.correct) playCorrectSound(); else playWrongSound();
         await saveProgress();
         await bumpStreak();
-        if(oi===q.correct) await addPoints(3);
-        await checkBadges();
         const scrollY = window.scrollY;
         render();
         window.scrollTo({top:scrollY, behavior:'instant'});
@@ -3567,9 +2836,6 @@ function emptyHTML(msg){
   if(SETTINGS.reminderOn){
     const [h,m] = (SETTINGS.reminderTime||'20:00').split(':').map(Number);
     scheduleReminder(h,m).catch(()=>{});
-  }
-  if(!localStorage.getItem(LS_KEYS.onboarded)){
-    setTimeout(showOnboarding, 400);
   }
 })();
 
