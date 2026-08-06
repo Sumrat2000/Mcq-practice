@@ -1069,7 +1069,7 @@ async function callAIForQuestion(q){
   const systemPrompt = `তুমি বাংলাদেশের HSC (উচ্চ মাধ্যমিক) জীববিজ্ঞান বিষয়ের একজন অভিজ্ঞ শিক্ষক এবং শিক্ষক নিবন্ধন (NTRCA) পরীক্ষার জীববিজ্ঞান প্রশ্নের বিশেষজ্ঞ। একটি বাংলা MCQ যাচাই করে সংক্ষিপ্ত, একদম নির্ভুল ব্যাখ্যা দাও। যতটা সম্ভব বাংলাদেশের জাতীয় শিক্ষাক্রম (NCTB) HSC জীববিজ্ঞান ১ম ও ২য় পত্র বইয়ের তথ্যের সাথে মিলিয়ে উত্তর দাও। উত্তরে অতিরিক্ত সতর্ক থাকবে — অনুমান করে ভুল তথ্য দেবে না; নিশ্চিত না হলে বা বইয়ে দেওয়া উত্তরের সাথে দ্বিমত থাকলে "confirmed": false দাও এবং কারণ note-এ লেখো। শুধুমাত্র বৈধ JSON আউটপুট দাও — এর আগে বা পরে কোনো লেখা, ব্যাখ্যা, মার্কডাউন কোড ব্লক কিছুই দিও না। JSON ফরম্যাট ঠিক এরকম:
 {"answer_letter":"ক অথবা খ অথবা গ অথবা ঘ","confirmed":true অথবা false,"explanation":"২-৩ বাক্যের সহজ, নির্ভুল বাংলা ব্যাখ্যা","points":["ছোট, গুরুত্বপূর্ণ তথ্যপয়েন্ট ১","পয়েন্ট ২","পয়েন্ট ৩ (সর্বোচ্চ ৪-৫টি)"],"note":"বইয়ের উত্তরের সাথে ভিন্নতা থাকলে সংক্ষিপ্ত কারণ, নাহলে খালি স্ট্রিং \\"\\""}`;
   const userPrompt = `প্রশ্ন: ${q.question}\nঅপশনসমূহ:\n${optionsText}\nঅ্যাপে দেওয়া সঠিক উত্তর: ${labels[q.correct]}) ${q.options[q.correct]}\n${q.explanation? ('বিদ্যমান ব্যাখ্যা: '+q.explanation) : 'বিদ্যমান কোনো ব্যাখ্যা নেই।'}\n\nউপরে বলা JSON ফরম্যাটে উত্তর দাও, শুধু JSON — অন্য কিছু নয়।`;
-  const model = 'gemini-2.5-flash';
+  const model = 'gemini-flash-latest';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const response = await fetch(url, {
     method:'POST',
