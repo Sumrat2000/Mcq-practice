@@ -469,6 +469,11 @@ body.dark-mode .q-note-input{background:#2a2617;}
 .ai-box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow);}
 .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
 @keyframes spin{to{transform:rotate(360deg)}}
+.ai-spinner{width:16px;height:16px;border:2px solid var(--paper-2);border-top-color:var(--forest-light);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;flex-shrink:0;}
+.ai-help-btn{font-size:14px;}
+.ai-help-modal-box{max-height:78vh;overflow-y:auto;}
+.ai-points-list{margin:6px 0 0 18px;padding:0;}
+.ai-points-list li{margin-bottom:4px;}
 .tab-row{display:flex;gap:6px;background:var(--paper-2);padding:4px;border-radius:12px;margin-bottom:16px;}
 .tab-btn{flex:1;padding:9px;border:none;background:transparent;border-radius:9px;font-family:'Hind Siliguri';font-weight:600;font-size:13.5px;cursor:pointer;color:var(--moss);}
 .tab-btn.active{background:var(--card);color:var(--forest);box-shadow:0 1px 3px rgba(0,0,0,.08);}
@@ -716,9 +721,10 @@ let PROGRESS = {}; // unitId -> {seen:{}, correct:{}, exams:[]}
 let EDITS = {}; // unitId -> { mcq: {key: {question,options,explanation,correct}} }
 let MIXED_EXAMS = []; // array of {date, unitIds:[], score, total, took}
 let storageReady = false;
-const LS_KEYS = {progress:'bioapp_progress', custom:'bioapp_custom', edits:'bioapp_edits', mixed:'bioapp_mixed_exams', settings:'bioapp_settings', favorites:'bioapp_favorites', excluded:'bioapp_excluded', streak:'bioapp_streak', notes:'bioapp_notes', points:'bioapp_points', badges:'bioapp_badges', onboarded:'bioapp_onboarded'};
-let SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false, fontSize:'normal', reminderOn:false, reminderTime:'20:00', soundEnabled: true};
+const LS_KEYS = {progress:'bioapp_progress', custom:'bioapp_custom', edits:'bioapp_edits', mixed:'bioapp_mixed_exams', settings:'bioapp_settings', favorites:'bioapp_favorites', excluded:'bioapp_excluded', streak:'bioapp_streak', notes:'bioapp_notes', points:'bioapp_points', badges:'bioapp_badges', onboarded:'bioapp_onboarded', aiCache:'bioapp_ai_cache'};
+let SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false, fontSize:'normal', reminderOn:false, reminderTime:'20:00', soundEnabled: true, aiApiKey:''};
 let FAVORITES = new Set(); // set of "uid:key" strings
+let AI_CACHE = {}; // "uid:key" -> {answer_letter, confirmed, explanation, points, note}
 
 function lsGetArr(key){
   try{ const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : []; }
@@ -757,7 +763,8 @@ async function loadStorage(){
   if(typeof POINTS !== 'number') POINTS = 0;
   BADGES = lsGetArr(LS_KEYS.badges);
   const s = lsGet(LS_KEYS.settings);
-  SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false, fontSize:'normal', reminderOn:false, reminderTime:'20:00', soundEnabled: true, ...s};
+  SETTINGS = {moveAnsweredToEnd: false, swipeEnabled: true, darkMode: false, fontSize:'normal', reminderOn:false, reminderTime:'20:00', soundEnabled: true, aiApiKey:'', ...s};
+  AI_CACHE = lsGet(LS_KEYS.aiCache) || {};
   document.body.classList.toggle('dark-mode', !!SETTINGS.darkMode);
   document.body.classList.remove('font-large','font-xlarge');
   if(SETTINGS.fontSize==='large') document.body.classList.add('font-large');
@@ -822,6 +829,7 @@ async function saveCustom(){ lsSet(LS_KEYS.custom, CUSTOM_Q); }
 async function saveEdits(){ lsSet(LS_KEYS.edits, EDITS); }
 async function saveExcluded(){ lsSet(LS_KEYS.excluded, EXCLUDED_Q); }
 async function saveNotes(){ lsSet(LS_KEYS.notes, NOTES); }
+async function saveAICache(){ lsSet(LS_KEYS.aiCache, AI_CACHE); }
 
 /* ================= POINTS & LEVELS ================= */
 function levelFromPoints(pts){
@@ -1045,6 +1053,132 @@ function allQuestionsFor(uid){
     return {...q, ...(e||{}), _key:k, source:'custom', edited: !!e, unitId:uid};
   });
   return base.concat(custom);
+}
+
+/* ================= AI HELP (per-question) ================= */
+function aiCacheKey(uid, key){ return uid+':'+key; }
+function ensureAICache(){ if(!AI_CACHE) AI_CACHE = {}; return AI_CACHE; }
+function aiHelpBtnHTML(uid, key, extraStyle){
+  return `<button class="edit-btn ai-help-btn" data-uid="${uid}" data-key="${esc(key)}" title="AI সহায়তা" style="${extraStyle||''}">🤖</button>`;
+}
+async function callAIForQuestion(q){
+  const apiKey = (SETTINGS.aiApiKey||'').trim();
+  if(!apiKey){ const e = new Error('NO_KEY'); e.code='NO_KEY'; throw e; }
+  const labels=['ক','খ','গ','ঘ'];
+  const optionsText = q.options.map((o,i)=>`${labels[i]}) ${o}`).join('\n');
+  const systemPrompt = `তুমি বাংলাদেশের HSC (উচ্চ মাধ্যমিক) জীববিজ্ঞান বিষয়ের একজন অভিজ্ঞ শিক্ষক এবং শিক্ষক নিবন্ধন (NTRCA) পরীক্ষার জীববিজ্ঞান প্রশ্নের বিশেষজ্ঞ। একটি বাংলা MCQ যাচাই করে সংক্ষিপ্ত, একদম নির্ভুল ব্যাখ্যা দাও। যতটা সম্ভব বাংলাদেশের জাতীয় শিক্ষাক্রম (NCTB) HSC জীববিজ্ঞান ১ম ও ২য় পত্র বইয়ের তথ্যের সাথে মিলিয়ে উত্তর দাও। উত্তরে অতিরিক্ত সতর্ক থাকবে — অনুমান করে ভুল তথ্য দেবে না; নিশ্চিত না হলে বা বইয়ে দেওয়া উত্তরের সাথে দ্বিমত থাকলে "confirmed": false দাও এবং কারণ note-এ লেখো। শুধুমাত্র বৈধ JSON আউটপুট দাও — এর আগে বা পরে কোনো লেখা, ব্যাখ্যা, মার্কডাউন কোড ব্লক কিছুই দিও না। JSON ফরম্যাট ঠিক এরকম:
+{"answer_letter":"ক অথবা খ অথবা গ অথবা ঘ","confirmed":true অথবা false,"explanation":"২-৩ বাক্যের সহজ, নির্ভুল বাংলা ব্যাখ্যা","points":["ছোট, গুরুত্বপূর্ণ তথ্যপয়েন্ট ১","পয়েন্ট ২","পয়েন্ট ৩ (সর্বোচ্চ ৪-৫টি)"],"note":"বইয়ের উত্তরের সাথে ভিন্নতা থাকলে সংক্ষিপ্ত কারণ, নাহলে খালি স্ট্রিং \\"\\""}`;
+  const userPrompt = `প্রশ্ন: ${q.question}\nঅপশনসমূহ:\n${optionsText}\nঅ্যাপে দেওয়া সঠিক উত্তর: ${labels[q.correct]}) ${q.options[q.correct]}\n${q.explanation? ('বিদ্যমান ব্যাখ্যা: '+q.explanation) : 'বিদ্যমান কোনো ব্যাখ্যা নেই।'}\n\nউপরে বলা JSON ফরম্যাটে উত্তর দাও, শুধু JSON — অন্য কিছু নয়।`;
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body: JSON.stringify({
+      model:'claude-sonnet-4-6',
+      max_tokens: 700,
+      system: systemPrompt,
+      messages:[{role:'user', content:userPrompt}]
+    })
+  });
+  if(!response.ok){
+    let msg = 'API ত্রুটি (কোড ' + response.status + ')';
+    try{ const j = await response.json(); if(j && j.error && j.error.message) msg = j.error.message; }catch(e){}
+    throw new Error(msg);
+  }
+  const data = await response.json();
+  const text = (data.content||[]).map(b=>b.text||'').join('\n').trim();
+  const cleaned = text.replace(/```json/gi,'').replace(/```/g,'').trim();
+  let parsed;
+  try{ parsed = JSON.parse(cleaned); }
+  catch(e){ throw new Error('AI-এর উত্তর ঠিক ফরম্যাটে পড়া যায়নি, আবার চেষ্টা করো।'); }
+  return parsed;
+}
+function showAIHelpModal(uid, key){
+  const q = allQuestionsFor(uid).find(x=>x._key===key);
+  if(!q){ showAlert('প্রশ্নটি খুঁজে পাওয়া যায়নি।'); return; }
+  const overlay = document.createElement('div');
+  overlay.className = 'cm-overlay';
+  overlay.innerHTML = `
+    <div class="cm-box cm-box-wide ai-help-modal-box" style="text-align:left;">
+      <div class="cm-msg" style="text-align:left;font-weight:700;margin-bottom:6px;">🤖 AI সহায়তা</div>
+      <div style="font-size:12.5px;color:var(--moss);margin-bottom:10px;line-height:1.5;">${esc(q.question)}</div>
+      <div id="ai-help-body" style="font-size:13.5px;color:var(--ink);line-height:1.7;"></div>
+      <div class="cm-actions" id="ai-help-actions" style="margin-top:14px;"></div>
+    </div>`;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(()=>overlay.classList.add('show'));
+  const close = ()=>{ overlay.classList.remove('show'); setTimeout(()=>overlay.remove(), 180); };
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) close(); });
+  const body = overlay.querySelector('#ai-help-body');
+  const actions = overlay.querySelector('#ai-help-actions');
+
+  const apiKey = (SETTINGS.aiApiKey||'').trim();
+  if(!apiKey){
+    body.innerHTML = `AI সহায়তা ব্যবহার করতে আগে সেটিংসে গিয়ে তোমার নিজের Anthropic API key যোগ করতে হবে।`;
+    actions.innerHTML = `<button class="cm-btn cm-cancel" id="ai-close">বন্ধ করো</button><button class="cm-btn cm-ok" id="ai-goto-settings">সেটিংসে যাও</button>`;
+    overlay.querySelector('#ai-close').onclick = close;
+    overlay.querySelector('#ai-goto-settings').onclick = ()=>{ close(); showAppSettingsModal(); };
+    return;
+  }
+  actions.innerHTML = `<button class="cm-btn cm-cancel" id="ai-close">বন্ধ করো</button>`;
+  overlay.querySelector('#ai-close').onclick = close;
+
+  const cache = ensureAICache();
+  const ck = aiCacheKey(uid, key);
+  const labels=['ক','খ','গ','ঘ'];
+
+  function renderResult(result, fromCache){
+    const mismatch = result && result.confirmed===false;
+    body.innerHTML = `
+      <div style="margin-bottom:8px;"><b>সঠিক উত্তর:</b> ${labels[q.correct]}) ${esc(q.options[q.correct])} &nbsp; ${mismatch? '<span style="color:var(--rust-deep);font-weight:600;">⚠️ AI দ্বিমত পোষণ করছে</span>' : '<span style="color:var(--leaf-deep);font-weight:600;">✅ AI যাচাই করেছে</span>'}</div>
+      ${mismatch && result.note? `<div style="background:#fbe9e4;color:var(--rust-deep);padding:8px 10px;border-radius:8px;font-size:12.5px;margin-bottom:8px;">${esc(result.note)}</div>`:''}
+      <div style="margin-bottom:8px;"><b>সংক্ষিপ্ত ব্যাখ্যা:</b><br>${esc(result.explanation||'')}</div>
+      ${result.points && result.points.length? `<div><b>গুরুত্বপূর্ণ তথ্য:</b><ul class="ai-points-list">${result.points.map(p=>`<li>${esc(p)}</li>`).join('')}</ul></div>`:''}
+      <div style="font-size:11px;color:var(--moss);margin-top:10px;">⚠️ AI-এর উত্তরও ভুল হতে পারে — বইয়ের সাথে মিলিয়ে দেখো।${fromCache? ' (আগে থেকে সংরক্ষিত উত্তর)':''}</div>
+    `;
+    actions.innerHTML = `<button class="cm-btn cm-cancel" id="ai-close2">বন্ধ করো</button><button class="cm-btn cm-ok" id="ai-add-explain">ব্যাখ্যায় যোগ করো</button>`;
+    overlay.querySelector('#ai-close2').onclick = close;
+    overlay.querySelector('#ai-add-explain').onclick = async ()=>{
+      const edits = ensureUnitEdits(uid);
+      const pointsText = (result.points||[]).map(p=>'• '+p).join('\n');
+      const addition = [result.explanation||'', pointsText].filter(Boolean).join('\n');
+      const existing = (q.explanation||'').trim();
+      const mergedExplanation = existing? (existing + '\n\n[AI]\n' + addition) : addition;
+      edits.mcq[key] = {question:q.question, options:q.options, correct:q.correct, explanation: mergedExplanation};
+      await saveEdits();
+      close();
+      showToastMini('ব্যাখ্যায় যোগ হয়েছে ✓');
+      render();
+    };
+  }
+
+  if(cache[ck]){ renderResult(cache[ck], true); return; }
+
+  body.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--moss);"><span class="ai-spinner"></span> AI চিন্তা করছে...</div>`;
+  callAIForQuestion(q).then(async result=>{
+    cache[ck] = result;
+    await saveAICache();
+    renderResult(result, false);
+  }).catch(err=>{
+    const msg = (err && err.message) || 'অজানা সমস্যা হয়েছে।';
+    body.innerHTML = `<div style="color:var(--rust-deep);">⚠️ সমস্যা হয়েছে: ${esc(msg)}</div><div style="font-size:12px;color:var(--moss);margin-top:6px;">API key ঠিক আছে কিনা এবং ইন্টারনেট সংযোগ আছে কিনা যাচাই করো।</div>`;
+    actions.innerHTML = `<button class="cm-btn cm-cancel" id="ai-close3">বন্ধ করো</button><button class="cm-btn cm-ok" id="ai-retry">আবার চেষ্টা করো</button>`;
+    overlay.querySelector('#ai-close3').onclick = close;
+    overlay.querySelector('#ai-retry').onclick = ()=>{ close(); setTimeout(()=>showAIHelpModal(uid, key), 190); };
+  });
+}
+function onAIHelpClick(e){
+  const btn = e.target.closest('.ai-help-btn');
+  if(!btn) return;
+  e.stopPropagation();
+  const uid = Number(btn.dataset.uid);
+  const key = btn.dataset.key;
+  if(!uid || !key) return;
+  showAIHelpModal(uid, key);
 }
 
 /* ================= State ================= */
@@ -1381,6 +1515,16 @@ function showAppSettingsModal(){
       </div>
 
       <div class="settings-block">
+        <div class="settings-block-title">🤖 AI সহায়তা (ঐচ্ছিক)</div>
+        <p style="font-size:12px;color:var(--moss);margin:4px 0 8px;line-height:1.6;">প্রশ্নের পাশের 🤖 বাটনে ট্যাপ করলে AI দিয়ে যাচাই করা সংক্ষিপ্ত উত্তর ও ব্যাখ্যা দেখতে পাবে। এর জন্য নিজের Anthropic API key দরকার (<a href="https://console.anthropic.com/" target="_blank" style="color:var(--forest-light);">console.anthropic.com</a> থেকে নেওয়া যায়)। key শুধু তোমার ফোনেই সংরক্ষিত থাকে, তবে এটা কোডে দৃশ্যমান থাকে বলে অন্য কারো সাথে এই অ্যাপ শেয়ার করলে key শেয়ার কোরো না।</p>
+        <input type="password" id="ai-api-key-input" value="${esc(SETTINGS.aiApiKey||'')}" placeholder="sk-ant-..." style="width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13px;background:var(--paper-2);color:var(--ink);font-family:'JetBrains Mono';margin-bottom:8px;">
+        <div class="row" style="display:flex;gap:8px;">
+          <button class="big-btn ghost" id="btn-ai-key-clear" style="flex:1;">মুছে ফেলো</button>
+          <button class="big-btn" id="btn-ai-key-save" style="flex:1;margin:0;">সেভ করো</button>
+        </div>
+      </div>
+
+      <div class="settings-block">
         <div class="settings-block-title">ডেটা ব্যাকআপ</div>
         <p style="font-size:12px;color:var(--moss);margin:4px 0 10px;">ফোন পাল্টালে বা অ্যাপ রিইনস্টল করলে তোমার নিজের প্রশ্ন, পরিসংখ্যান, স্ট্রিক — সব হারিয়ে যাবে যদি ব্যাকআপ না রাখো।</p>
         <div class="row" style="display:flex;gap:8px;">
@@ -1457,6 +1601,19 @@ function showAppSettingsModal(){
   overlay.querySelector('#btn-backup').onclick = ()=>{ close(); setTimeout(showBackupModal, 200); };
   overlay.querySelector('#btn-restore').onclick = ()=>{ close(); setTimeout(showRestoreModal, 200); };
   overlay.querySelector('#btn-replay-guide').onclick = ()=>{ close(); setTimeout(showOnboarding, 200); };
+
+  const aiKeyInput = overlay.querySelector('#ai-api-key-input');
+  overlay.querySelector('#btn-ai-key-save').onclick = async ()=>{
+    SETTINGS.aiApiKey = (aiKeyInput.value||'').trim();
+    await saveSettings();
+    showToastMini(SETTINGS.aiApiKey? 'API key সেভ হয়েছে ✓' : 'কোনো key দেওয়া হয়নি');
+  };
+  overlay.querySelector('#btn-ai-key-clear').onclick = async ()=>{
+    aiKeyInput.value = '';
+    SETTINGS.aiApiKey = '';
+    await saveSettings();
+    showToastMini('API key মুছে ফেলা হয়েছে');
+  };
 }
 
 function nav(view, extra={}){
@@ -2084,7 +2241,10 @@ function quickPracticeHTML(){
     <div class="qof font-mono">✓${state.quickScore}</div>
   </div>
   <div class="qcard">
-    <span class="qnum font-mono">প্রশ্ন ${state.quickIndex+1}</span>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <span class="qnum font-mono">প্রশ্ন ${state.quickIndex+1}</span>
+      ${answered? aiHelpBtnHTML(q.unitId||state.quickUnitId, q._key) : ''}
+    </div>
     <div class="qtext">${esc(q.question)}</div>
     <div class="opts">
     ${q.options.map((opt,oi)=>{
@@ -2278,6 +2438,7 @@ function studyHTML(){
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <span class="qnum font-mono">প্রশ্ন ${idx+1}${q.source==='custom'?' <span class="ai-badge" style="margin-right:0;margin-left:6px;">নিজের</span>':''}${q.edited?' <span class="ai-badge" style="background:#fbf0dd;color:var(--amber-deep);margin-right:0;margin-left:6px;">এডিট করা</span>':''}${isHardForYou?' <span class="ai-badge hard-badge" style="margin-right:0;margin-left:6px;">তোমার জন্য কঠিন</span>':''}</span>
           <div style="display:flex;gap:5px;">
+            ${aiHelpBtnHTML(u.id, q._key)}
             <button class="edit-btn fav-btn ${isFavorite(u.id,q._key)?'active':''}" data-uid="${u.id}" data-key="${q._key}" title="ফেভারিটে যোগ করো">${isFavorite(u.id,q._key)?ICO.heartFill:ICO.heart}</button>
             <button class="edit-btn note-toggle-btn ${noteText?'active':''}" data-notekey="${noteKey}" title="নোট">📝</button>
             <button class="edit-btn" data-key="${q._key}" title="এডিট করো">${ICO.edit}</button>
@@ -2629,7 +2790,7 @@ async function finishExam(){
     if(!answered) skipped++;
     else if(ok) correctCount++;
     else wrongCount++;
-    return {question:q.question, options:q.options, correct:q.correct, selected: sel===undefined?-1:sel, explanation:q.explanation, ok, answered, unitId: q.unitId||state.unitId};
+    return {question:q.question, options:q.options, correct:q.correct, selected: sel===undefined?-1:sel, explanation:q.explanation, ok, answered, unitId: q.unitId||state.unitId, _key:q._key};
   });
   const rawScore = correctCount - wrongCount*NEG_MARK;
   const score = Math.round(rawScore*100)/100;
@@ -2750,7 +2911,10 @@ function examResultHTML(){
   r.review.filter(x=>!x.ok).map(x=>{
     const labels=['ক','খ','গ','ঘ'];
     return `<div class="review-item">
-      <div class="q">${esc(x.question)}</div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div class="q" style="margin-bottom:0;">${esc(x.question)}</div>
+        ${x._key? aiHelpBtnHTML(x.unitId, x._key, 'margin-top:2px;') : ''}
+      </div>
       ${x.selected>=0? `<div class="row your-wrong">তোমার উত্তর: ${labels[x.selected]}) ${esc(x.options[x.selected])}</div>`:`<div class="row your-wrong">উত্তর দাওনি</div>`}
       <div class="row correct-ans">সঠিক উত্তর: ${labels[x.correct]}) ${esc(x.options[x.correct])}</div>
       ${x.explanation? `<div class="exp">${esc(x.explanation)}</div>`:''}
@@ -3164,7 +3328,7 @@ function customHTML(){
         <label style="margin:0;">প্রশ্ন</label>
         <button class="split-icon-btn" id="btn-parse-paste" type="button" title="পেস্ট করা লেখা থেকে প্রশ্ন ও অপশন আলাদা করো">✂️</button>
       </div>
-      <textarea rows="2" id="cf-question" placeholder="প্রশ্ন লেখো, অথবা পুরো প্রশ্ন+অপশন এখানে পেস্ট করে ✂️ চাপো..."></textarea>
+      <textarea rows="2" id="cf-question" placeholder="প্রশ্ন লেখো, অথবা কপি করে ✂️ চাপো (নিজে থেকেই পেস্ট হয়ে যাবে)..."></textarea>
     </div>
     ${[0,1,2,3].map(oi=>`<div class="edit-field"><label>অপশন ${labels[oi]}</label><textarea rows="1" id="cf-opt${oi}" placeholder="অপশন ${labels[oi]}"></textarea></div>`).join('')}
     <div class="edit-field">
@@ -3187,6 +3351,7 @@ function customHTML(){
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <span class="qnum font-mono">নিজের প্রশ্ন ${idx+1}</span>
         <div style="display:flex;gap:6px;">
+          ${aiHelpBtnHTML(u.id, q._key)}
           <button class="edit-btn" data-key="${q._key}" title="এডিট করো">${ICO.edit}</button>
           <button class="edit-btn del-custom-btn" data-idx="${idx}" title="মুছে ফেলো" style="color:var(--rust-deep);">${ICO.trash}</button>
         </div>
@@ -3218,9 +3383,20 @@ function attachCustom(){
     };
   });
   const parseBtn = document.getElementById('btn-parse-paste');
-  if(parseBtn) parseBtn.onclick = ()=>{
-    const raw = document.getElementById('cf-question').value;
-    if(!raw.trim()){ showAlert('আগে প্রশ্ন বক্সে লেখাটা পেস্ট করো।'); return; }
+  if(parseBtn) parseBtn.onclick = async ()=>{
+    const qBox = document.getElementById('cf-question');
+    let raw = qBox.value;
+    // try auto-reading the clipboard so the person doesn't have to paste manually first
+    if(navigator.clipboard && navigator.clipboard.readText){
+      try{
+        const clip = await navigator.clipboard.readText();
+        if(clip && clip.trim()){
+          raw = clip;
+          qBox.value = clip;
+        }
+      }catch(e){ /* clipboard permission denied or unavailable — fall back to whatever's already typed */ }
+    }
+    if(!raw.trim()){ showAlert('আগে প্রশ্নটা কপি করো, অথবা প্রশ্ন বক্সে পেস্ট করে রাখো।'); return; }
     const parsed = parsePastedMCQ(raw);
     if(!parsed.question){ showAlert('প্রশ্নের লেখাটা বুঝতে পারলাম না, একটু ঠিক করে চেষ্টা করো।'); return; }
     document.getElementById('cf-question').value = parsed.question;
@@ -3356,7 +3532,10 @@ function favoritesHTML(){
     return `<div class="qcard" data-uid="${q.unitId}" data-key="${q._key}">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <span class="qnum font-mono">প্রশ্ন ${idx+1} · ইউনিট ${q.unitId}</span>
-        <button class="edit-btn fav-btn active" data-uid="${q.unitId}" data-key="${q._key}" title="ফেভারিট থেকে সরাও">${ICO.heartFill}</button>
+        <div style="display:flex;gap:5px;">
+          ${aiHelpBtnHTML(q.unitId, q._key)}
+          <button class="edit-btn fav-btn active" data-uid="${q.unitId}" data-key="${q._key}" title="ফেভারিট থেকে সরাও">${ICO.heartFill}</button>
+        </div>
       </div>
       <div class="qtext">${esc(q.question)}</div>
       <div class="opts">
@@ -3421,7 +3600,10 @@ function mistakesHTML(){
     const answered = prog.seen && prog.seen[q._key]!==undefined;
     const selected = answered? prog.seen[q._key] : null;
     return `<div class="qcard" data-uid="${q.unitId}" data-key="${q._key}">
-      <span class="qnum font-mono">প্রশ্ন ${idx+1} · ইউনিট ${q.unitId}</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="qnum font-mono">প্রশ্ন ${idx+1} · ইউনিট ${q.unitId}</span>
+        ${aiHelpBtnHTML(q.unitId, q._key)}
+      </div>
       <div class="qtext">${esc(q.question)}</div>
       <div class="opts">
       ${q.options.map((opt,oi)=>{
@@ -3563,6 +3745,7 @@ function emptyHTML(msg){
     history.pushState({view:'home', unitId:null}, '', '');
   }catch(e){}
   await loadStorage();
+  document.addEventListener('click', onAIHelpClick);
   render();
   if(SETTINGS.reminderOn){
     const [h,m] = (SETTINGS.reminderTime||'20:00').split(':').map(Number);
