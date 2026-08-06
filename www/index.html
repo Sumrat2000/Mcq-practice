@@ -1069,29 +1069,32 @@ async function callAIForQuestion(q){
   const systemPrompt = `তুমি বাংলাদেশের HSC (উচ্চ মাধ্যমিক) জীববিজ্ঞান বিষয়ের একজন অভিজ্ঞ শিক্ষক এবং শিক্ষক নিবন্ধন (NTRCA) পরীক্ষার জীববিজ্ঞান প্রশ্নের বিশেষজ্ঞ। একটি বাংলা MCQ যাচাই করে সংক্ষিপ্ত, একদম নির্ভুল ব্যাখ্যা দাও। যতটা সম্ভব বাংলাদেশের জাতীয় শিক্ষাক্রম (NCTB) HSC জীববিজ্ঞান ১ম ও ২য় পত্র বইয়ের তথ্যের সাথে মিলিয়ে উত্তর দাও। উত্তরে অতিরিক্ত সতর্ক থাকবে — অনুমান করে ভুল তথ্য দেবে না; নিশ্চিত না হলে বা বইয়ে দেওয়া উত্তরের সাথে দ্বিমত থাকলে "confirmed": false দাও এবং কারণ note-এ লেখো। শুধুমাত্র বৈধ JSON আউটপুট দাও — এর আগে বা পরে কোনো লেখা, ব্যাখ্যা, মার্কডাউন কোড ব্লক কিছুই দিও না। JSON ফরম্যাট ঠিক এরকম:
 {"answer_letter":"ক অথবা খ অথবা গ অথবা ঘ","confirmed":true অথবা false,"explanation":"২-৩ বাক্যের সহজ, নির্ভুল বাংলা ব্যাখ্যা","points":["ছোট, গুরুত্বপূর্ণ তথ্যপয়েন্ট ১","পয়েন্ট ২","পয়েন্ট ৩ (সর্বোচ্চ ৪-৫টি)"],"note":"বইয়ের উত্তরের সাথে ভিন্নতা থাকলে সংক্ষিপ্ত কারণ, নাহলে খালি স্ট্রিং \\"\\""}`;
   const userPrompt = `প্রশ্ন: ${q.question}\nঅপশনসমূহ:\n${optionsText}\nঅ্যাপে দেওয়া সঠিক উত্তর: ${labels[q.correct]}) ${q.options[q.correct]}\n${q.explanation? ('বিদ্যমান ব্যাখ্যা: '+q.explanation) : 'বিদ্যমান কোনো ব্যাখ্যা নেই।'}\n\nউপরে বলা JSON ফরম্যাটে উত্তর দাও, শুধু JSON — অন্য কিছু নয়।`;
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const model = 'gemini-2.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const response = await fetch(url, {
     method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
-    },
+    headers:{ 'Content-Type':'application/json' },
     body: JSON.stringify({
-      model:'claude-sonnet-4-6',
-      max_tokens: 700,
-      system: systemPrompt,
-      messages:[{role:'user', content:userPrompt}]
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role:'user', parts:[{ text: userPrompt }] }],
+      generationConfig: { temperature: 0.2, maxOutputTokens: 700, responseMimeType: 'application/json' }
     })
   });
   if(!response.ok){
     let msg = 'API ত্রুটি (কোড ' + response.status + ')';
     try{ const j = await response.json(); if(j && j.error && j.error.message) msg = j.error.message; }catch(e){}
+    if(response.status===429) msg = 'আজকের ফ্রি লিমিট শেষ হয়ে গেছে (Gemini ফ্রি টায়ার), কিছুক্ষণ পর অথবা আগামীকাল আবার চেষ্টা করো।';
     throw new Error(msg);
   }
   const data = await response.json();
-  const text = (data.content||[]).map(b=>b.text||'').join('\n').trim();
+  const cand = data.candidates && data.candidates[0];
+  const parts = (cand && cand.content && cand.content.parts) || [];
+  const text = parts.map(p=>p.text||'').join('\n').trim();
   const cleaned = text.replace(/```json/gi,'').replace(/```/g,'').trim();
+  if(!cleaned){
+    if(cand && cand.finishReason==='SAFETY') throw new Error('AI নিরাপত্তা ফিল্টারে আটকে গেছে, প্রশ্নটা এডিট করে আবার চেষ্টা করো।');
+    throw new Error('AI থেকে কোনো উত্তর পাওয়া যায়নি, আবার চেষ্টা করো।');
+  }
   let parsed;
   try{ parsed = JSON.parse(cleaned); }
   catch(e){ throw new Error('AI-এর উত্তর ঠিক ফরম্যাটে পড়া যায়নি, আবার চেষ্টা করো।'); }
@@ -1118,7 +1121,7 @@ function showAIHelpModal(uid, key){
 
   const apiKey = (SETTINGS.aiApiKey||'').trim();
   if(!apiKey){
-    body.innerHTML = `AI সহায়তা ব্যবহার করতে আগে সেটিংসে গিয়ে তোমার নিজের Anthropic API key যোগ করতে হবে।`;
+    body.innerHTML = `AI সহায়তা ব্যবহার করতে আগে সেটিংসে গিয়ে একটা ফ্রি Google Gemini API key যোগ করতে হবে (aistudio.google.com/apikey থেকে বিনামূল্যে নেওয়া যায়)।`;
     actions.innerHTML = `<button class="cm-btn cm-cancel" id="ai-close">বন্ধ করো</button><button class="cm-btn cm-ok" id="ai-goto-settings">সেটিংসে যাও</button>`;
     overlay.querySelector('#ai-close').onclick = close;
     overlay.querySelector('#ai-goto-settings').onclick = ()=>{ close(); showAppSettingsModal(); };
@@ -1515,9 +1518,9 @@ function showAppSettingsModal(){
       </div>
 
       <div class="settings-block">
-        <div class="settings-block-title">🤖 AI সহায়তা (ঐচ্ছিক)</div>
-        <p style="font-size:12px;color:var(--moss);margin:4px 0 8px;line-height:1.6;">প্রশ্নের পাশের 🤖 বাটনে ট্যাপ করলে AI দিয়ে যাচাই করা সংক্ষিপ্ত উত্তর ও ব্যাখ্যা দেখতে পাবে। এর জন্য নিজের Anthropic API key দরকার (<a href="https://console.anthropic.com/" target="_blank" style="color:var(--forest-light);">console.anthropic.com</a> থেকে নেওয়া যায়)। key শুধু তোমার ফোনেই সংরক্ষিত থাকে, তবে এটা কোডে দৃশ্যমান থাকে বলে অন্য কারো সাথে এই অ্যাপ শেয়ার করলে key শেয়ার কোরো না।</p>
-        <input type="password" id="ai-api-key-input" value="${esc(SETTINGS.aiApiKey||'')}" placeholder="sk-ant-..." style="width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13px;background:var(--paper-2);color:var(--ink);font-family:'JetBrains Mono';margin-bottom:8px;">
+        <div class="settings-block-title">🤖 AI সহায়তা (ঐচ্ছিক, ফ্রি)</div>
+        <p style="font-size:12px;color:var(--moss);margin:4px 0 8px;line-height:1.6;">প্রশ্নের পাশের 🤖 বাটনে ট্যাপ করলে AI (Google Gemini) দিয়ে যাচাই করা সংক্ষিপ্ত উত্তর ও ব্যাখ্যা দেখতে পাবে — এটা সম্পূর্ণ ফ্রি (কার্ড লাগে না, শুধু দিনে একটা লিমিট আছে)। <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--forest-light);">aistudio.google.com/apikey</a> এ গিয়ে Google অ্যাকাউন্ট দিয়ে "Create API key" চাপলেই ফ্রি key পেয়ে যাবে, সেটা নিচে বসাও। key শুধু তোমার ফোনেই সংরক্ষিত থাকে, তবে এটা কোডে দৃশ্যমান থাকে বলে অন্য কারো সাথে এই অ্যাপ শেয়ার করলে নিজের key শেয়ার কোরো না।</p>
+        <input type="password" id="ai-api-key-input" value="${esc(SETTINGS.aiApiKey||'')}" placeholder="AIza..." style="width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13px;background:var(--paper-2);color:var(--ink);font-family:'JetBrains Mono';margin-bottom:8px;">
         <div class="row" style="display:flex;gap:8px;">
           <button class="big-btn ghost" id="btn-ai-key-clear" style="flex:1;">মুছে ফেলো</button>
           <button class="big-btn" id="btn-ai-key-save" style="flex:1;margin:0;">সেভ করো</button>
