@@ -661,12 +661,15 @@ footer.note{text-align:center;font-size:11.5px;color:var(--moss);margin-top:30px
   position:fixed; inset:0; background:rgba(20,30,20,0.45); z-index:200;
   display:flex; align-items:center; justify-content:center; padding:24px;
   opacity:0; transition:opacity .18s ease; backdrop-filter:blur(1px);
+  overflow-y:auto; -webkit-overflow-scrolling:touch;
 }
 .cm-overlay.show{opacity:1;}
 .cm-box{
   background:var(--paper); border-radius:18px; padding:22px 20px 16px;
   max-width:360px; width:100%; box-shadow:0 12px 30px rgba(0,0,0,0.25);
   transform:translateY(8px) scale(.98); transition:transform .18s ease;
+  max-height:calc(100vh - 48px); overflow-y:auto; -webkit-overflow-scrolling:touch;
+  margin:auto;
 }
 .cm-overlay.show .cm-box{transform:translateY(0) scale(1);}
 .cm-box-wide{max-width:420px;}
@@ -686,7 +689,7 @@ footer.note{text-align:center;font-size:11.5px;color:var(--moss);margin-top:30px
 .cm-ok{background:var(--forest); color:#fff;}
 .cm-ok.cm-danger{background:var(--rust);}
 .cm-actions.cm-single .cm-ok{flex:0 0 auto; padding:12px 40px;}
-.settings-block{margin-bottom:18px; padding-bottom:16px; border-bottom:1px solid var(--line);}
+.settings-block{margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--line);}
 .settings-block:last-of-type{border-bottom:none; margin-bottom:8px; padding-bottom:0;}
 .settings-block-title{font-size:13px; font-weight:700; color:var(--ink);}
 .mini-toast{
@@ -1069,23 +1072,45 @@ async function callAIForQuestion(q){
   const systemPrompt = `তুমি বাংলাদেশের HSC (উচ্চ মাধ্যমিক) জীববিজ্ঞান বিষয়ের একজন অভিজ্ঞ শিক্ষক এবং শিক্ষক নিবন্ধন (NTRCA) পরীক্ষার জীববিজ্ঞান প্রশ্নের বিশেষজ্ঞ। একটি বাংলা MCQ যাচাই করে সংক্ষিপ্ত, একদম নির্ভুল ব্যাখ্যা দাও। যতটা সম্ভব বাংলাদেশের জাতীয় শিক্ষাক্রম (NCTB) HSC জীববিজ্ঞান ১ম ও ২য় পত্র বইয়ের তথ্যের সাথে মিলিয়ে উত্তর দাও। উত্তরে অতিরিক্ত সতর্ক থাকবে — অনুমান করে ভুল তথ্য দেবে না; নিশ্চিত না হলে বা বইয়ে দেওয়া উত্তরের সাথে দ্বিমত থাকলে "confirmed": false দাও এবং কারণ note-এ লেখো। শুধুমাত্র বৈধ JSON আউটপুট দাও — এর আগে বা পরে কোনো লেখা, ব্যাখ্যা, মার্কডাউন কোড ব্লক কিছুই দিও না। JSON ফরম্যাট ঠিক এরকম:
 {"answer_letter":"ক অথবা খ অথবা গ অথবা ঘ","confirmed":true অথবা false,"explanation":"২-৩ বাক্যের সহজ, নির্ভুল বাংলা ব্যাখ্যা","points":["ছোট, গুরুত্বপূর্ণ তথ্যপয়েন্ট ১","পয়েন্ট ২","পয়েন্ট ৩ (সর্বোচ্চ ৪-৫টি)"],"note":"বইয়ের উত্তরের সাথে ভিন্নতা থাকলে সংক্ষিপ্ত কারণ, নাহলে খালি স্ট্রিং \\"\\""}`;
   const userPrompt = `প্রশ্ন: ${q.question}\nঅপশনসমূহ:\n${optionsText}\nঅ্যাপে দেওয়া সঠিক উত্তর: ${labels[q.correct]}) ${q.options[q.correct]}\n${q.explanation? ('বিদ্যমান ব্যাখ্যা: '+q.explanation) : 'বিদ্যমান কোনো ব্যাখ্যা নেই।'}\n\nউপরে বলা JSON ফরম্যাটে উত্তর দাও, শুধু JSON — অন্য কিছু নয়।`;
-  const model = 'gemini-flash-latest';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-  const response = await fetch(url, {
-    method:'POST',
-    headers:{ 'Content-Type':'application/json' },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ role:'user', parts:[{ text: userPrompt }] }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 700, responseMimeType: 'application/json' }
-    })
-  });
-  if(!response.ok){
+  // Try a list of models in order. Google periodically retires/renames
+  // Gemini model ids (e.g. some new API keys suddenly get "2.5-flash is no
+  // longer available"). If one model id fails that way, fall back to the
+  // next one automatically instead of the whole feature breaking.
+  const MODEL_CANDIDATES = ['gemini-flash-latest','gemini-2.5-flash','gemini-3.6-flash','gemini-2.5-flash-lite','gemini-3.5-flash-lite'];
+  let response, lastErrMsg = '';
+  for(let i=0;i<MODEL_CANDIDATES.length;i++){
+    const model = MODEL_CANDIDATES[i];
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    response = await fetch(url, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role:'user', parts:[{ text: userPrompt }] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 2048, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
+      })
+    });
+    if(response.ok) break;
     let msg = 'API ত্রুটি (কোড ' + response.status + ')';
-    try{ const j = await response.json(); if(j && j.error && j.error.message) msg = j.error.message; }catch(e){}
-    if(response.status===429) msg = 'আজকের ফ্রি লিমিট শেষ হয়ে গেছে (Gemini ফ্রি টায়ার), কিছুক্ষণ পর অথবা আগামীকাল আবার চেষ্টা করো।';
-    throw new Error(msg);
+    let retryable = false;
+    try{
+      const j = await response.json();
+      if(j && j.error && j.error.message){
+        msg = j.error.message;
+        // "no longer available" / model not found -> try the next model id
+        if(response.status===404 || /no longer available|not found|NOT_FOUND/i.test(msg)) retryable = true;
+        // some models reject thinkingConfig entirely -> also try next model
+        if(/thinking|thinkingConfig|unknown field|unsupported/i.test(msg)) retryable = true;
+      }
+    }catch(e){}
+    if(response.status===429){ msg = 'আজকের ফ্রি লিমিট শেষ হয়ে গেছে (Gemini ফ্রি টায়ার), কিছুক্ষণ পর অথবা আগামীকাল আবার চেষ্টা করো।'; }
+    lastErrMsg = msg;
+    if(!retryable || i===MODEL_CANDIDATES.length-1){
+      throw new Error(lastErrMsg);
+    }
+    // otherwise loop continues to the next candidate model
   }
+  if(!response || !response.ok) throw new Error(lastErrMsg || 'AI থেকে উত্তর পাওয়া যায়নি।');
   const data = await response.json();
   const cand = data.candidates && data.candidates[0];
   const parts = (cand && cand.content && cand.content.parts) || [];
@@ -1096,8 +1121,21 @@ async function callAIForQuestion(q){
     throw new Error('AI থেকে কোনো উত্তর পাওয়া যায়নি, আবার চেষ্টা করো।');
   }
   let parsed;
-  try{ parsed = JSON.parse(cleaned); }
-  catch(e){ throw new Error('AI-এর উত্তর ঠিক ফরম্যাটে পড়া যায়নি, আবার চেষ্টা করো।'); }
+  try{
+    parsed = JSON.parse(cleaned);
+  }catch(e){
+    // Fall back to extracting the outermost {...} block in case there's
+    // stray text or the response got cut off mid-way.
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if(start!==-1 && end!==-1 && end>start){
+      try{ parsed = JSON.parse(cleaned.slice(start, end+1)); }catch(e2){}
+    }
+    if(!parsed){
+      if(cand && cand.finishReason==='MAX_TOKENS') throw new Error('AI-এর উত্তর অসম্পূর্ণ ছিল (অনেক বড় হয়ে গিয়েছিল), আবার চেষ্টা করো।');
+      throw new Error('AI-এর উত্তর ঠিক ফরম্যাটে পড়া যায়নি, আবার চেষ্টা করো।');
+    }
+  }
   return parsed;
 }
 function showAIHelpModal(uid, key){
@@ -1519,7 +1557,7 @@ function showAppSettingsModal(){
 
       <div class="settings-block">
         <div class="settings-block-title">🤖 AI সহায়তা (ঐচ্ছিক, ফ্রি)</div>
-        <p style="font-size:12px;color:var(--moss);margin:4px 0 8px;line-height:1.6;">প্রশ্নের পাশের 🤖 বাটনে ট্যাপ করলে AI (Google Gemini) দিয়ে যাচাই করা সংক্ষিপ্ত উত্তর ও ব্যাখ্যা দেখতে পাবে — এটা সম্পূর্ণ ফ্রি (কার্ড লাগে না, শুধু দিনে একটা লিমিট আছে)। <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--forest-light);">aistudio.google.com/apikey</a> এ গিয়ে Google অ্যাকাউন্ট দিয়ে "Create API key" চাপলেই ফ্রি key পেয়ে যাবে, সেটা নিচে বসাও। key শুধু তোমার ফোনেই সংরক্ষিত থাকে, তবে এটা কোডে দৃশ্যমান থাকে বলে অন্য কারো সাথে এই অ্যাপ শেয়ার করলে নিজের key শেয়ার কোরো না।</p>
+        <p style="font-size:12px;color:var(--moss);margin:4px 0 8px;line-height:1.6;">প্রশ্নের পাশের 🤖 বাটনে ট্যাপ করলে AI-যাচাই করা ব্যাখ্যা দেখা যাবে। ফ্রি key নাও: <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--forest-light);">aistudio.google.com/apikey</a> — এখানে বসাও। key কারো সাথে শেয়ার কোরো না।</p>
         <input type="password" id="ai-api-key-input" value="${esc(SETTINGS.aiApiKey||'')}" placeholder="AIza..." style="width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13px;background:var(--paper-2);color:var(--ink);font-family:'JetBrains Mono';margin-bottom:8px;">
         <div class="row" style="display:flex;gap:8px;">
           <button class="big-btn ghost" id="btn-ai-key-clear" style="flex:1;">মুছে ফেলো</button>
@@ -1529,7 +1567,7 @@ function showAppSettingsModal(){
 
       <div class="settings-block">
         <div class="settings-block-title">ডেটা ব্যাকআপ</div>
-        <p style="font-size:12px;color:var(--moss);margin:4px 0 10px;">ফোন পাল্টালে বা অ্যাপ রিইনস্টল করলে তোমার নিজের প্রশ্ন, পরিসংখ্যান, স্ট্রিক — সব হারিয়ে যাবে যদি ব্যাকআপ না রাখো।</p>
+        <p style="font-size:12px;color:var(--moss);margin:4px 0 10px;">ফোন পাল্টালে সব হারিয়ে যাবে, তাই ব্যাকআপ রাখো।</p>
         <div class="row" style="display:flex;gap:8px;">
           <button class="big-btn ghost" id="btn-backup" style="flex:1;">ব্যাকআপ নাও</button>
           <button class="big-btn ghost" id="btn-restore" style="flex:1;">রিস্টোর করো</button>
