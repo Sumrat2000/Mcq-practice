@@ -2649,7 +2649,7 @@ function attachStudy(){
       window.scrollTo({top:scrollY, behavior:'instant'});
     };
   });
-  document.querySelectorAll('.edit-btn:not(.fav-btn)').forEach(btn=>{
+  document.querySelectorAll('.edit-btn:not(.fav-btn):not(.ai-help-btn):not(.note-toggle-btn)').forEach(btn=>{
     btn.onclick = ()=>{ state.editOpen.add(btn.dataset.key); render(); };
   });
   attachEditCards(u.id);
@@ -3502,7 +3502,7 @@ function attachCustom(){
     render();
   };
   attachEditCards(u.id);
-  document.querySelectorAll('.edit-btn:not(.del-custom-btn)').forEach(btn=>{
+  document.querySelectorAll('.edit-btn:not(.del-custom-btn):not(.ai-help-btn):not(.note-toggle-btn)').forEach(btn=>{
     btn.onclick = ()=>{ state.editOpen.add(btn.dataset.key); render(); };
   });
   document.querySelectorAll('.del-custom-btn').forEach(btn=>{
