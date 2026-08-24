@@ -1110,7 +1110,7 @@ async function callAIForQuestion(q){
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role:'user', parts:[{ text: userPrompt }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 2048, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
+          generationConfig: { temperature: 0.2, maxOutputTokens: 2048, responseMimeType: 'application/json' }
         })
       });
     }catch(networkErr){
