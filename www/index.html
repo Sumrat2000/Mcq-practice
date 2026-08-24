@@ -1092,19 +1092,35 @@ async function callAIForQuestion(q){
   // longer available"). If one model id fails that way, fall back to the
   // next one automatically instead of the whole feature breaking.
   const MODEL_CANDIDATES = ['gemini-flash-latest','gemini-2.5-flash','gemini-3.6-flash','gemini-2.5-flash-lite','gemini-3.5-flash-lite'];
+  const REQUEST_TIMEOUT_MS = 20000; // don't let the UI spin forever if the network hangs
   let response, lastErrMsg = '';
   for(let i=0;i<MODEL_CANDIDATES.length;i++){
     const model = MODEL_CANDIDATES[i];
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-    response = await fetch(url, {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role:'user', parts:[{ text: userPrompt }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 2048, responseMimeType: 'application/json' }
-      })
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(()=>controller.abort(), REQUEST_TIMEOUT_MS);
+    try{
+      response = await fetch(url, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role:'user', parts:[{ text: userPrompt }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 2048, responseMimeType: 'application/json' }
+        })
+      });
+    }catch(networkErr){
+      clearTimeout(timer);
+      const isAbort = networkErr && networkErr.name==='AbortError';
+      lastErrMsg = isAbort
+        ? 'নেটওয়ার্ক রেসপন্স দিচ্ছে না (২০ সেকেন্ড অপেক্ষার পরও কিছু আসেনি)। ইন্টারনেট সংযোগ, মোবাইল ডেটা/ওয়াইফাই, বা VPN চেক করো — কিছু নেটওয়ার্কে Google-এর এই ঠিকানাটা ব্লক থাকতে পারে।'
+        : 'ইন্টারনেটে সংযোগ করা যায়নি। সংযোগ চেক করে আবার চেষ্টা করো।';
+      response = null;
+      if(i===MODEL_CANDIDATES.length-1){ throw new Error(lastErrMsg); }
+      continue; // try the next model candidate in case this one's endpoint specifically is unreachable
+    }
+    clearTimeout(timer);
     if(response.ok) break;
     let msg = 'API ত্রুটি (কোড ' + response.status + ')';
     let retryable = true;
