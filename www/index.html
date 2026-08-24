@@ -1091,7 +1091,10 @@ async function callAIForQuestion(q){
   // Gemini model ids (e.g. some new API keys suddenly get "2.5-flash is no
   // longer available"). If one model id fails that way, fall back to the
   // next one automatically instead of the whole feature breaking.
-  const MODEL_CANDIDATES = ['gemini-flash-latest','gemini-2.5-flash','gemini-3.6-flash','gemini-2.5-flash-lite','gemini-3.5-flash-lite'];
+  // Lite models first: they skip the heavy "thinking" pass Flash models do,
+  // so answers come back in 1-3s instead of 10-20s+. Full Flash models kept
+  // as fallback in case a lite model id gets retired.
+  const MODEL_CANDIDATES = ['gemini-2.5-flash-lite','gemini-3.5-flash-lite','gemini-flash-latest','gemini-2.5-flash','gemini-3.6-flash'];
   const REQUEST_TIMEOUT_MS = 20000; // don't let the UI spin forever if the network hangs
   let response, lastErrMsg = '';
   for(let i=0;i<MODEL_CANDIDATES.length;i++){
@@ -1107,7 +1110,7 @@ async function callAIForQuestion(q){
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role:'user', parts:[{ text: userPrompt }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 2048, responseMimeType: 'application/json' }
+          generationConfig: { temperature: 0.2, maxOutputTokens: 2048, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
         })
       });
     }catch(networkErr){
