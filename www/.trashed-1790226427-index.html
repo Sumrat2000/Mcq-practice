@@ -1059,14 +1059,6 @@ function ensureUnitProgress(uid){
   if(!PROGRESS[uid]) PROGRESS[uid] = {seen:{}, correct:{}, exams:[]};
   return PROGRESS[uid];
 }
-// Records which question was most recently answered in this unit (with a
-// timestamp), regardless of which mode (study/quick practice/favorites/
-// mistakes) it was answered in — powers the "সর্বশেষ পড়া প্রশ্নে যাও" jump button.
-function markLastSeen(uid, key){
-  const prog = ensureUnitProgress(uid);
-  prog.lastSeenKey = key;
-  prog.lastSeenAt = Date.now();
-}
 function allQuestionsFor(uid){
   const edits = (EDITS[uid]&&EDITS[uid].mcq) || {};
   const excluded = new Set(EXCLUDED_Q[uid] || []);
@@ -1260,76 +1252,6 @@ function onAIHelpClick(e){
   const key = btn.dataset.key;
   if(!uid || !key) return;
   showAIHelpModal(uid, key);
-}
-
-/* ================= AI HELP (auto-fill missing explanations) =================
-   When a question with no explanation gets answered/revealed, silently fetch
-   the same AI explanation the 🤖 button would give and save it — no click
-   needed. Runs one at a time (small gap between calls) so we don't slam the
-   free Gemini rate limit if several questions get revealed in quick succession. */
-const autoFillQueue = [];
-const autoFillQueued = new Set();
-let autoFillRunning = false;
-function markExplainLoading(uid, key){
-  document.querySelectorAll(`.qcard[data-key="${CSS.escape(key)}"]`).forEach(card=>{
-    if(card.dataset.uid && Number(card.dataset.uid)!==uid) return;
-    const el = card.querySelector('.explain');
-    if(el) el.innerHTML = `<b>ব্যাখ্যা:</b> <span style="color:var(--moss);display:inline-flex;align-items:center;gap:6px;"><span class="ai-spinner"></span> AI থেকে ব্যাখ্যা আনা হচ্ছে...</span>`;
-  });
-}
-function queueAutoFillExplanation(uid, key){
-  const apiKey = (SETTINGS.aiApiKey||'').trim();
-  if(!apiKey) return; // no key set — stay silent, no nagging
-  const ck = aiCacheKey(uid, key);
-  if(autoFillQueued.has(ck)) return;
-  const q = allQuestionsFor(uid).find(x=>x._key===key);
-  if(!q || (q.explanation||'').trim()) return; // already has one
-  autoFillQueued.add(ck);
-  autoFillQueue.push({uid, key});
-  markExplainLoading(uid, key);
-  runAutoFillQueue();
-}
-async function runAutoFillQueue(){
-  if(autoFillRunning) return;
-  autoFillRunning = true;
-  while(autoFillQueue.length){
-    const {uid, key} = autoFillQueue.shift();
-    const ck = aiCacheKey(uid, key);
-    try{
-      const q = allQuestionsFor(uid).find(x=>x._key===key);
-      if(q && !(q.explanation||'').trim()){
-        const cache = ensureAICache();
-        let result = cache[ck];
-        if(!result){
-          result = await callAIForQuestion(q);
-          cache[ck] = result;
-          await saveAICache();
-        }
-        const pointsText = (result.points||[]).map(p=>'• '+p).join('\n');
-        const addition = [result.explanation||'', pointsText].filter(Boolean).join('\n');
-        if(addition.trim()){
-          const edits = ensureUnitEdits(uid);
-          edits.mcq[key] = {question:q.question, options:q.options, correct:q.correct, explanation: addition};
-          await saveEdits();
-          document.querySelectorAll(`.qcard[data-key="${CSS.escape(key)}"]`).forEach(card=>{
-            if(card.dataset.uid && Number(card.dataset.uid)!==uid) return;
-            const el = card.querySelector('.explain');
-            if(el) el.innerHTML = `<b>ব্যাখ্যা:</b> ${esc(addition)}`;
-          });
-        }
-      }
-    }catch(err){
-      document.querySelectorAll(`.qcard[data-key="${CSS.escape(key)}"]`).forEach(card=>{
-        if(card.dataset.uid && Number(card.dataset.uid)!==uid) return;
-        const el = card.querySelector('.explain');
-        if(el) el.innerHTML = `<b>ব্যাখ্যা:</b> কোনো ব্যাখ্যা দেওয়া নেই। <span style="font-size:11px;color:var(--rust-deep);">(স্বয়ংক্রিয়ভাবে আনতে ব্যর্থ হয়েছে, 🤖 বাটনে চেপে আবার চেষ্টা করতে পারো)</span>`;
-      });
-    }finally{
-      autoFillQueued.delete(ck);
-    }
-    if(autoFillQueue.length) await new Promise(r=>setTimeout(r, 400));
-  }
-  autoFillRunning = false;
 }
 
 /* ================= State ================= */
@@ -2283,10 +2205,7 @@ function unitHTML(){
     <span class="tag font-mono">UNIT ${u.id} / 10</span>
     <h2>${esc(u.name)}</h2>
     <div class="desc">${u.questions.length}টি MCQ${customCount? ' • '+customCount+'টি নিজের প্রশ্ন':''} — এখন পর্যন্ত ${p}% পড়া হয়েছে${best!==null? ' • সেরা স্কোর '+best+'%':''}</div>
-    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
-      ${prog.lastSeenKey? `<button id="btn-jump-last" class="reset-link" title="সর্বশেষ পড়া প্রশ্নে যাও">📍 সর্বশেষ পড়া প্রশ্নে যাও</button>`:''}
-      ${seenCount? `<button id="btn-reset-progress" class="reset-link">${ICO.refresh} পড়ার অগ্রগতি রিসেট করো</button>`:''}
-    </div>
+    ${seenCount? `<button id="btn-reset-progress" class="reset-link">${ICO.refresh} পড়ার অগ্রগতি রিসেট করো</button>`:''}
   </div>
 
   <div class="mode-grid">
@@ -2323,8 +2242,6 @@ function attachUnit(){
   document.getElementById('btn-flashcard').onclick = ()=> startFlashcards(state.unitId);
   document.getElementById('btn-quick').onclick = ()=> startQuickPractice(state.unitId);
   document.getElementById('btn-custom').onclick = ()=> nav('custom',{unitId:state.unitId});
-  const jumpBtn = document.getElementById('btn-jump-last');
-  if(jumpBtn) jumpBtn.onclick = ()=> jumpToLastSeen(state.unitId);
   const r = document.getElementById('btn-reset-progress');
   if(r) r.onclick = ()=>{
     showConfirm('এই ইউনিটের পড়ার অগ্রগতি (উত্তরগুলো) মুছে আবার শুরু করবে? পরীক্ষার ফলাফল থাকবে।', async ()=>{
@@ -2334,32 +2251,6 @@ function attachUnit(){
       render();
     }, {danger:true, okLabel:'মুছে ফেলো'});
   };
-}
-// Jump straight to the last question answered in this unit (any mode),
-// landing on the right study-page and scrolling/highlighting the card —
-// without resetting the current session tally/lock state.
-function jumpToLastSeen(uid){
-  const prog = ensureUnitProgress(uid);
-  const key = prog.lastSeenKey;
-  if(!key) return;
-  const qs = allQuestionsFor(uid);
-  const idx = qs.findIndex(x=>x._key===key);
-  if(idx<0){ showToastMini('প্রশ্নটি আর নেই।'); return; }
-  const page = Math.floor(idx/STUDY_PAGE_SIZE)+1;
-  state.navStack = state.navStack || [];
-  state.navStack.push({view: state.view, unitId: state.unitId});
-  state = {...state, view:'study', unitId:uid, studyPage:page};
-  try{ history.pushState({view:'study', unitId:uid}, '', ''); }catch(e){}
-  render();
-  setTimeout(()=>{
-    const card = document.querySelector(`.qcard[data-key="${CSS.escape(key)}"]:not(.edit-card)`);
-    if(!card){ window.scrollTo({top:0, behavior:'instant'}); return; }
-    card.scrollIntoView({behavior:'instant', block:'center'});
-    card.style.transition = 'background-color .4s ease';
-    const prevBg = card.style.backgroundColor;
-    card.style.backgroundColor = 'var(--amber-light, #fdeecb)';
-    setTimeout(()=>{ card.style.backgroundColor = prevBg; }, 1400);
-  }, 30);
 }
 
 /* ================= QUICK PRACTICE (5-minute burst) ================= */
@@ -2476,7 +2367,6 @@ function attachQuickPractice(){
       state.quickSelected = oi;
       const prog = ensureUnitProgress(q.unitId || state.quickUnitId);
       prog.seen[q._key] = oi;
-      markLastSeen(q.unitId || state.quickUnitId, q._key);
       if(oi===q.correct){ state.quickScore++; playCorrectSound(); prog.correct[q._key]=true; await addPoints(2); }
       else { playWrongSound(); delete prog.correct[q._key]; }
       await saveProgress();
@@ -2793,7 +2683,6 @@ function attachStudy(){
         const prog = ensureUnitProgress(u.id);
         state.sessionSeen[key] = oi; // visual lock, resets next visit
         prog.seen[key] = oi; // permanent record, powers পরিসংখ্যান stats
-        markLastSeen(u.id, key);
         if(oi===q.correct) prog.correct[key]=true; else delete prog.correct[key];
         if(oi===q.correct) playCorrectSound(); else playWrongSound();
         if(!state.sessionTally) state.sessionTally = {correct:0, wrong:0};
@@ -2806,7 +2695,6 @@ function attachStudy(){
         const scrollY = window.scrollY;
         render();
         window.scrollTo({top:scrollY, behavior:'instant'});
-        if(!q.explanation || !q.explanation.trim()) queueAutoFillExplanation(u.id, key);
       };
     });
   });
@@ -3779,13 +3667,11 @@ function attachFavorites(){
         if(!q) return;
         const prog = ensureUnitProgress(uid);
         prog.seen[key] = oi;
-        markLastSeen(uid, key);
         if(oi===q.correct) prog.correct[key]=true; else delete prog.correct[key];
         await saveProgress();
         const scrollY = window.scrollY;
         render();
         window.scrollTo({top:scrollY, behavior:'instant'});
-        if(!q.explanation || !q.explanation.trim()) queueAutoFillExplanation(uid, key);
       };
     });
   });
@@ -3840,7 +3726,6 @@ function attachMistakes(){
         if(!q) return;
         const prog = ensureUnitProgress(uid);
         prog.seen[key] = oi;
-        markLastSeen(uid, key);
         if(oi===q.correct) prog.correct[key]=true; else delete prog.correct[key];
         if(oi===q.correct) playCorrectSound(); else playWrongSound();
         await saveProgress();
@@ -3850,7 +3735,6 @@ function attachMistakes(){
         const scrollY = window.scrollY;
         render();
         window.scrollTo({top:scrollY, behavior:'instant'});
-        if(!q.explanation || !q.explanation.trim()) queueAutoFillExplanation(uid, key);
       };
     });
   });
