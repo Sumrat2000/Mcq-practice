@@ -1059,13 +1059,18 @@ function ensureUnitProgress(uid){
   if(!PROGRESS[uid]) PROGRESS[uid] = {seen:{}, correct:{}, exams:[]};
   return PROGRESS[uid];
 }
-// Records which question was most recently answered in this unit (with a
-// timestamp), regardless of which mode (study/quick practice/favorites/
-// mistakes) it was answered in — powers the "সর্বশেষ পড়া প্রশ্নে যাও" jump button.
-function markLastSeen(uid, key){
+// The "সর্বশেষ পড়া প্রশ্ন" bookmark = how far you've read *continuously from
+// the very start of the unit*, with no gaps — not just whatever you answered
+// most recently. If you've answered Q1-Q10 in order, the bookmark is Q10,
+// even if you later go back and reread Q1-Q2, or jump ahead and peek at a
+// question near the end out of order (that doesn't move the bookmark past
+// Q10, since Q11 itself is still unanswered).
+function furthestContinuousIndex(uid){
+  const qs = allQuestionsFor(uid);
   const prog = ensureUnitProgress(uid);
-  prog.lastSeenKey = key;
-  prog.lastSeenAt = Date.now();
+  let idx = 0;
+  while(idx < qs.length && prog.seen && prog.seen[qs[idx]._key] !== undefined) idx++;
+  return idx; // count of contiguously-answered questions from the start
 }
 function allQuestionsFor(uid){
   const edits = (EDITS[uid]&&EDITS[uid].mcq) || {};
@@ -2276,6 +2281,7 @@ function unitHTML(){
   const best = examCount? Math.max(...prog.exams.map(e=>pct(Math.max(0,e.score),e.total))) : null;
   const customCount = (CUSTOM_Q[u.id]||[]).length;
   const seenCount = Object.keys(prog.seen||{}).length;
+  const bookmarkIdx = furthestContinuousIndex(u.id); // count of contiguously-answered from start
 
   return `
   <div class="unit-header">
@@ -2284,7 +2290,7 @@ function unitHTML(){
     <h2>${esc(u.name)}</h2>
     <div class="desc">${u.questions.length}টি MCQ${customCount? ' • '+customCount+'টি নিজের প্রশ্ন':''} — এখন পর্যন্ত ${p}% পড়া হয়েছে${best!==null? ' • সেরা স্কোর '+best+'%':''}</div>
     <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
-      ${prog.lastSeenKey? `<button id="btn-jump-last" class="reset-link" title="সর্বশেষ পড়া প্রশ্নে যাও">📍 সর্বশেষ পড়া প্রশ্নে যাও</button>`:''}
+      ${bookmarkIdx>0? `<button id="btn-jump-last" class="reset-link" title="সর্বশেষ পড়া প্রশ্নে যাও">📍 সর্বশেষ পড়া প্রশ্নে যাও (প্রশ্ন ${bookmarkIdx})</button>`:''}
       ${seenCount? `<button id="btn-reset-progress" class="reset-link">${ICO.refresh} পড়ার অগ্রগতি রিসেট করো</button>`:''}
     </div>
   </div>
@@ -2335,17 +2341,15 @@ function attachUnit(){
     }, {danger:true, okLabel:'মুছে ফেলো'});
   };
 }
-// Jump straight to the last question answered in this unit (any mode),
+// Jump straight to the furthest-continuously-read question in this unit,
 // landing on the right study-page and scrolling/highlighting the card —
 // without resetting the current session tally/lock state.
 function jumpToLastSeen(uid){
-  const prog = ensureUnitProgress(uid);
-  const key = prog.lastSeenKey;
-  if(!key) return;
+  const bookmarkIdx = furthestContinuousIndex(uid); // e.g. 10 means Q1-Q10 answered
+  if(bookmarkIdx<=0) return;
   const qs = allQuestionsFor(uid);
-  const idx = qs.findIndex(x=>x._key===key);
-  if(idx<0){ showToastMini('প্রশ্নটি আর নেই।'); return; }
-  const page = Math.floor(idx/STUDY_PAGE_SIZE)+1;
+  const key = qs[bookmarkIdx-1]._key; // the last of the contiguous run
+  const page = Math.floor((bookmarkIdx-1)/STUDY_PAGE_SIZE)+1;
   state.navStack = state.navStack || [];
   state.navStack.push({view: state.view, unitId: state.unitId});
   state = {...state, view:'study', unitId:uid, studyPage:page};
@@ -2476,7 +2480,6 @@ function attachQuickPractice(){
       state.quickSelected = oi;
       const prog = ensureUnitProgress(q.unitId || state.quickUnitId);
       prog.seen[q._key] = oi;
-      markLastSeen(q.unitId || state.quickUnitId, q._key);
       if(oi===q.correct){ state.quickScore++; playCorrectSound(); prog.correct[q._key]=true; await addPoints(2); }
       else { playWrongSound(); delete prog.correct[q._key]; }
       await saveProgress();
@@ -2793,7 +2796,6 @@ function attachStudy(){
         const prog = ensureUnitProgress(u.id);
         state.sessionSeen[key] = oi; // visual lock, resets next visit
         prog.seen[key] = oi; // permanent record, powers পরিসংখ্যান stats
-        markLastSeen(u.id, key);
         if(oi===q.correct) prog.correct[key]=true; else delete prog.correct[key];
         if(oi===q.correct) playCorrectSound(); else playWrongSound();
         if(!state.sessionTally) state.sessionTally = {correct:0, wrong:0};
@@ -3779,7 +3781,6 @@ function attachFavorites(){
         if(!q) return;
         const prog = ensureUnitProgress(uid);
         prog.seen[key] = oi;
-        markLastSeen(uid, key);
         if(oi===q.correct) prog.correct[key]=true; else delete prog.correct[key];
         await saveProgress();
         const scrollY = window.scrollY;
@@ -3840,7 +3841,6 @@ function attachMistakes(){
         if(!q) return;
         const prog = ensureUnitProgress(uid);
         prog.seen[key] = oi;
-        markLastSeen(uid, key);
         if(oi===q.correct) prog.correct[key]=true; else delete prog.correct[key];
         if(oi===q.correct) playCorrectSound(); else playWrongSound();
         await saveProgress();
