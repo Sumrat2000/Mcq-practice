@@ -110,68 +110,34 @@ body{
 
 /* ---------- home ---------- */
 .hero{
-  background:linear-gradient(135deg, #1a6e4f 0%, #1c8a5e 28%, #2fa06b 52%, #3d9ba8 78%, #3f6fb0 100%);
+  background:linear-gradient(160deg,var(--forest) 0%, var(--forest-light) 60%, var(--leaf) 130%);
   border-radius:16px;padding:14px 16px;color:#f5f1e2;position:relative;overflow:hidden;
   margin-bottom:16px;
   box-shadow:var(--shadow);
 }
 .hero::after{
   content:"";position:absolute;right:-30px;top:-30px;width:160px;height:160px;
-  background:radial-gradient(circle, rgba(255,255,255,0.16), transparent 70%);
+  background:radial-gradient(circle, rgba(255,255,255,0.12), transparent 70%);
 }
-.hero::before{
-  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
-  background:
-    radial-gradient(circle at 8% 92%, rgba(255,157,107,0.35), transparent 40%),
-    radial-gradient(circle at 92% 85%, rgba(124,200,255,0.30), transparent 42%),
-    radial-gradient(circle at 50% -10%, rgba(255,216,115,0.25), transparent 45%);
-}
-.hero>*{position:relative;z-index:1;}
 .hero .eyebrow{font-size:10.5px;letter-spacing:.08em;color:#cfe3d3;font-weight:600;font-family:'Hind Siliguri';}
 .hero h2{font-family:'Baloo Da 2';font-size:18px;margin:4px 0 5px;line-height:1.3;}
 .hero p{font-size:12px;color:#dfeee1;margin:0;line-height:1.5;max-width:46ch;}
-.hero .stat-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.hero .stat-row{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;}
 .hero .stat{font-family:'JetBrains Mono';}
 .hero .stat b{font-size:16px;display:block;}
 .hero .stat span{font-size:10px;color:#cfe3d3;}
 
-/* Colorful stat chips (icon-in-circle style) */
-.stat-chip{
-  flex:1;min-width:70px;
-  background:rgba(255,255,255,0.10);
-  border:1px solid rgba(255,255,255,0.14);
-  border-radius:14px;padding:10px 6px 9px;
-  display:flex;flex-direction:column;align-items:center;gap:6px;
-  text-align:center;
-}
-.stat-chip .chip-ico{
-  width:32px;height:32px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:15px;box-shadow:0 2px 6px rgba(0,0,0,0.18);
-}
-.stat-chip b{font-family:'JetBrains Mono';font-size:15px;line-height:1;color:#fff;}
-.stat-chip span{font-size:9px;color:#eaf3ea;margin-top:1px;}
-.chip-total{background:radial-gradient(circle at 30% 30%, #6fd39a, #2f9e63);}
-.chip-exam{background:radial-gradient(circle at 30% 30%, #ffd873, #f0a83c);}
-.chip-score{background:radial-gradient(circle at 30% 30%, #7cc8ff, #2f8fe0);}
-.chip-streak{background:radial-gradient(circle at 30% 30%, #ff9d6b, #ef5b3c);}
-
 .hero-compact{padding:11px 14px 10px;}
 .hero-compact::after{width:110px;height:110px;}
 .hero-compact-tag{font-size:10px;letter-spacing:.04em;color:#cfe3d3;font-weight:600;margin-bottom:8px;}
-.hero-compact .stat-row{margin-top:0;gap:8px;}
+.hero-compact .stat-row{margin-top:0;gap:14px;}
 .hero-compact .stat b{font-size:14px;}
 .hero-compact .stat span{font-size:9px;}
 
 .level-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
-.level-badge{
-  font-size:10.5px;font-weight:700;color:#3a2a05;white-space:nowrap;
-  background:linear-gradient(135deg,#ffe08a,#f5b942);
-  padding:4px 10px;border-radius:999px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.18);
-}
-.level-track{flex:1;height:6px;background:rgba(255,255,255,0.22);border-radius:999px;overflow:hidden;}
-.level-fill{height:100%;background:linear-gradient(90deg,#7cd39a,#ffd873);border-radius:999px;transition:width .4s ease;}
+.level-badge{font-size:10.5px;font-weight:700;color:#fff;white-space:nowrap;}
+.level-track{flex:1;height:5px;background:rgba(255,255,255,0.22);border-radius:999px;overflow:hidden;}
+.level-fill{height:100%;background:#fff;border-radius:999px;transition:width .4s ease;}
 .level-pts{font-size:10px;color:#cfe3d3;white-space:nowrap;}
 
 .levelup-icon{font-size:48px;margin-bottom:8px;animation:empty-pop .5s cubic-bezier(.34,1.56,.64,1) both;}
@@ -228,24 +194,17 @@ body{
 .folder-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;}
 .folder-card{
   background:var(--card);border:1px solid var(--line);border-radius:18px;
-  padding:16px 14px 40px;text-align:left;cursor:pointer;box-shadow:var(--shadow);
-  display:flex;flex-direction:column;align-items:flex-start;gap:3px;
-  transition:transform .12s ease;position:relative;overflow:hidden;
+  padding:18px 14px;text-align:right;cursor:pointer;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;align-items:flex-end;gap:4px;
+  transition:transform .12s ease;
 }
 .folder-card:active{transform:scale(0.96);}
 .folder-icon{
   width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;
-  color:#fff;margin-bottom:6px;position:relative;z-index:1;
-  box-shadow:0 3px 8px rgba(0,0,0,0.16);
+  color:#fff;margin-bottom:6px;
 }
-.folder-card h3{font-family:'Baloo Da 2';font-size:15.5px;margin:0;color:var(--accent,var(--forest));font-weight:700;position:relative;z-index:1;}
-.folder-card p{font-size:11.5px;color:var(--moss);margin:0;line-height:1.4;position:relative;z-index:1;}
-.folder-wave{position:absolute;left:0;bottom:0;width:100%;height:34px;z-index:0;pointer-events:none;}
-.folder-arrow{
-  position:absolute;right:12px;bottom:12px;width:30px;height:30px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;z-index:1;
-  background:var(--accent-light,#eee);color:var(--accent,#333);
-}
+.folder-card h3{font-family:'Baloo Da 2';font-size:15.5px;margin:0;color:var(--ink);font-weight:600;}
+.folder-card p{font-size:11.5px;color:var(--moss);margin:0;line-height:1.4;}
 
 /* ---------- unit hub ---------- */
 .unit-header{
@@ -2136,43 +2095,32 @@ function highlightMatch(text, query){
 }
 function homeFolderGridHTML(favCount){
   const mistakeCount = mistakeQuestions().length;
-  const wave = (color)=>`<svg class="folder-wave" viewBox="0 0 300 60" preserveAspectRatio="none"><path d="M0,32 C50,14 90,50 150,34 C210,18 250,48 300,28 L300,60 L0,60 Z" fill="${color}" opacity="0.35"/></svg>`;
   return `
     <div class="folder-grid">
-      <button class="folder-card" id="btn-go-units" style="--accent:#1c8a5e;--accent-light:#e3f5eb;">
+      <button class="folder-card" id="btn-go-units">
         <div class="folder-icon" style="background:linear-gradient(155deg,var(--forest),var(--leaf));">${ICO.folder}</div>
         <h3>ইউনিটসমূহ</h3>
         <p>১০টি ইউনিট ধরে পড়ো ও অনুশীলন করো</p>
-        <span class="folder-arrow">${ICO.fwd}</span>
-        ${wave('#bfe6d0')}
       </button>
-      <button class="folder-card" id="btn-go-exam" style="--accent:#c65a3a;--accent-light:#fbe7de;">
+      <button class="folder-card" id="btn-go-exam">
         <div class="folder-icon" style="background:linear-gradient(155deg,#c65a3a,var(--rust));">${ICO.clock}</div>
         <h3>পরীক্ষা</h3>
         <p>একাধিক ইউনিট বেছে নিয়ে টাইমড পরীক্ষা দাও</p>
-        <span class="folder-arrow">${ICO.fwd}</span>
-        ${wave('#f6cdb5')}
       </button>
-      <button class="folder-card" id="btn-go-stats" style="--accent:#3d7a9c;--accent-light:#e3f0f5;">
+      <button class="folder-card" id="btn-go-stats">
         <div class="folder-icon" style="background:linear-gradient(155deg,#3d7a9c,#5a9bbd);">${ICO.chart}</div>
         <h3>পরিসংখ্যান</h3>
         <p>তোমার পড়া ও ফলাফলের অগ্রগতি দেখো</p>
-        <span class="folder-arrow">${ICO.fwd}</span>
-        ${wave('#bcdcea')}
       </button>
-      <button class="folder-card" id="btn-go-favorites" style="--accent:#c94d6d;--accent-light:#fbe5ea;">
+      <button class="folder-card" id="btn-go-favorites">
         <div class="folder-icon" style="background:linear-gradient(155deg,#c94d6d,#e0708a);">${ICO.heartFill}</div>
         <h3>ফেভারিট</h3>
         <p>${favCount? favCount+'টি পছন্দের প্রশ্ন':'পছন্দের প্রশ্ন জমাও'}</p>
-        <span class="folder-arrow">${ICO.fwd}</span>
-        ${wave('#f4c1cf')}
       </button>
-      <button class="folder-card" id="btn-go-mistakes" style="--accent:#8a4a9c;--accent-light:#f0e4f3;grid-column:1 / -1;">
+      <button class="folder-card" id="btn-go-mistakes">
         <div class="folder-icon" style="background:linear-gradient(155deg,#8a4a9c,#b06fc4);">${ICO.refresh}</div>
         <h3>ভুল হওয়া প্রশ্ন</h3>
         <p>${mistakeCount? mistakeCount+'টি প্রশ্ন আবার অনুশীলন করো':'এখনো কোনো ভুল নেই 🎉'}</p>
-        <span class="folder-arrow">${ICO.fwd}</span>
-        ${wave('#dfc0e6')}
       </button>
     </div>`;
 }
@@ -2216,10 +2164,10 @@ function homeHTML(){
       <span class="level-pts font-mono">${POINTS} pt</span>
     </div>
     <div class="stat-row">
-      <div class="stat-chip"><span class="chip-ico chip-total">📄</span><b>${totalQ}</b><span>মোট প্রশ্ন</span></div>
-      <div class="stat-chip"><span class="chip-ico chip-exam">✅</span><b>${totalExams}</b><span>পরীক্ষা</span></div>
-      <div class="stat-chip"><span class="chip-ico chip-score">🎯</span><b>${avgScore!==null? avgScore+'%':'—'}</b><span>গড় স্কোর</span></div>
-      ${STREAK.count>0? `<div class="stat-chip"><span class="chip-ico chip-streak">🔥</span><b>${STREAK.count}</b><span>দিন ধারা.</span></div>`:''}
+      <div class="stat"><b>${totalQ}</b><span>মোট প্রশ্ন</span></div>
+      <div class="stat"><b>${totalExams}</b><span>পরীক্ষা</span></div>
+      <div class="stat"><b>${avgScore!==null? avgScore+'%':'—'}</b><span>গড় স্কোর</span></div>
+      ${STREAK.count>0? `<div class="stat streak-stat"><b>🔥${STREAK.count}</b><span>দিন ধারা.</span></div>`:''}
     </div>
   </div>
 
